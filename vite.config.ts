@@ -1,11 +1,18 @@
-import { reactRouter } from "@react-router/dev/vite";
-import tailwindcss from "@tailwindcss/vite";
+import { vitePlugin as remix } from "@remix-run/dev";
+import { installGlobals } from "@remix-run/node";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+installGlobals();
+
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
-  plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+	plugins: [
+		remix({
+			ignoredRouteFiles: [
+				"**/*.css",
+				"**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+			],
+		}),
+		tsconfigPaths(),
+	],
 });
