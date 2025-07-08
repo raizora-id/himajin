@@ -15,4 +15,5 @@ export default defineConfig({
 		}),
 		tsconfigPaths(),
 	],
+	assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg']
 });
