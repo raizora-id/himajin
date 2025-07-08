@@ -1,4 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
+import { HeroBanners } from "../features/products/components/hero-products";
+import { ProductGrid } from "../features/products/components/product-grid";
 
 export const meta: MetaFunction = () => {
 	return [
@@ -8,5 +10,10 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-	return <h1 className="text-3xl font-bold underline">Hello world!</h1>;
+	return (
+		<div className="min-h-screen bg-[#ffffff]">
+		<HeroBanners />
+		<ProductGrid />
+	  </div>
+	)
 }
