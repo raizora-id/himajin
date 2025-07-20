@@ -1,3 +1,4 @@
+import React from 'react';
 import { ImageWithFallback } from '../../ui/image-with-fallback/image-with-fallback';
 import profileImage from 'figma:asset/c2511b1f89c6e5b27702700c10a7a665ebaf524e.png';
 
@@ -15,7 +16,7 @@ export default function About() {
               </h1>
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-4 border-white shadow-lg">
                 <ImageWithFallback
-                  src={profileImage}
+                  src={"https://github.com/user-attachments/assets/5f555f56-a15b-49b2-b131-0e860f5ae49f"}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
