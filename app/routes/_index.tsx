@@ -21,15 +21,15 @@ import { HeroBanners } from "../features/products/components/hero-banner";
 import { ProductGrid } from "../features/products/components/product-grid";
 import { ProductDetail } from "../features/products/components/product-detail";
 import { CheckoutWizard } from "../features/products/components/checkout-wizard";
-import About from "../features/products/components/about";
-import Footer from "../features/products/components/footer";
-import { CartButton } from "./components/Cart";
-import { HeaderBar } from "./components/HeaderBar";
-import { BottomCartBar } from "./components/BottomCartBar";
-import { HomeSkeleton } from "./components/ProductSkeleton";
-import { Button } from "./components/ui/button";
-import { Toaster } from "./components/ui/sonner";
-import { useDataFetching } from "./hooks/useDataFetching";
+import About from "../features/about/about";
+import Footer from "../ui/footer/footer";
+import { CartButton } from "../components/Cart";
+import { HeaderBar } from "../components/HeaderBar";
+import { BottomCartBar } from "../components/BottomCartBar";
+import { HomeSkeleton } from "../components/ProductSkeleton";
+import { Button } from "../ui/button/button";
+import { Toaster } from "../ui/sonner/sonner";
+import { useDataFetching } from "../hooks/use-data-fetching";
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<"home" | "product-detail" | "checkout" | "checkout-success" | "about">("home");
