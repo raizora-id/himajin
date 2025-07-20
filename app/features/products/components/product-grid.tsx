@@ -1,16 +1,21 @@
 import { useState } from "react";
-import imgProduct11Jpg from "figma:asset/c60277281d2290eadf074962b6dcc325f00baf7f.png";
-import imgProduct21Jpg from "figma:asset/75465ca3a71205c24a54ac70f28c312cbeabe6fc.png";
-import imgProduct31Jpg from "figma:asset/adacd42858637fe216460f8f1ad1bd520a5747d6.png";
-import imgProduct41Jpg from "figma:asset/cbfdbc9c7762cc10616463cb041a91a0ee13a6e3.png";
-import imgProduct51Jpg from "figma:asset/5e54ca86f58be985a7ea1082b7da9261aef20407.png";
-import imgProduct61Jpg from "figma:asset/3211afa8d825ab6f2393cbee26cbfa9704be33e0.png";
+
 import { useDataFetching } from "../../../hooks/use-data-fetching";
 import { ProductGridSkeleton } from "./product-skeleton";
 import { useCart } from "../../../stores/cart-store";
 import { Button } from "../../../ui/button/button";
 import { ShoppingCart, Plus } from "lucide-react";
 import { toast } from "sonner";
+
+const images = {
+  imgProduct11Jpg: "https://github.com/user-attachments/assets/bb08b99b-b582-4b65-ab7e-360f63cc71f9",
+  imgDivProductRate: "https://github.com/user-attachments/assets/dbbb2cbf-8ffa-4b1f-9873-041f9ffe8dcb",
+  imgProduct21Jpg: "https://github.com/user-attachments/assets/fec9f2b9-12b5-433e-899b-2c7001dc0376",
+  imgProduct31Jpg: "https://github.com/user-attachments/assets/c393ba64-98f0-4e13-b2ec-3543319beebe",
+  imgProduct41Jpg: "https://github.com/user-attachments/assets/fffcc00e-a6c7-44a8-a331-0b2254b6becf",
+  imgProduct51Jpg: "https://github.com/user-attachments/assets/502ea919-99b2-4e67-b499-8c46b8928c79",
+  imgProduct61Jpg: "https://github.com/user-attachments/assets/81d5dae9-12b3-4c95-8f65-8f5ce4acf0f0",
+};
 
 interface Product {
   id: number;
@@ -40,7 +45,7 @@ const productsData: Product[] = [
     oldPrice: 32.8,
     rating: 4.0,
     brand: "NestFood",
-    image: imgProduct11Jpg,
+    image: images.imgProduct11Jpg,
     badge: { text: "Hot", color: "bg-[#f74b81]" }
   },
   {
@@ -52,7 +57,7 @@ const productsData: Product[] = [
     oldPrice: 55.8,
     rating: 3.5,
     brand: "Stouffer",
-    image: imgProduct21Jpg,
+    image: images.imgProduct21Jpg,
     badge: { text: "Sale", color: "bg-[#67bcee]" }
   },
   {
@@ -64,7 +69,7 @@ const productsData: Product[] = [
     oldPrice: 52.8,
     rating: 4.0,
     brand: "StarKist",
-    image: imgProduct31Jpg,
+    image: images.imgProduct31Jpg,
     badge: { text: "New", color: "bg-[#3bb77e]" },
     isNew: true
   },
@@ -77,7 +82,7 @@ const productsData: Product[] = [
     oldPrice: 19.8,
     rating: 4.0,
     brand: "NestFood",
-    image: imgProduct41Jpg,
+    image: images.imgProduct41Jpg,
     isProtein: true
   },
   {
@@ -89,7 +94,7 @@ const productsData: Product[] = [
     oldPrice: 25.8,
     rating: 4.0,
     brand: "NestFood",
-    image: imgProduct51Jpg,
+    image: images.imgProduct51Jpg,
     badge: { text: "-14%", color: "bg-[#f59758]" },
     isProtein: true
   },
@@ -102,7 +107,7 @@ const productsData: Product[] = [
     oldPrice: 55.8,
     rating: 4.0,
     brand: "NestFood",
-    image: imgProduct61Jpg,
+    image: images.imgProduct61Jpg,
     isProtein: true
   },
   {
@@ -114,7 +119,7 @@ const productsData: Product[] = [
     oldPrice: 99.99,
     rating: 4.5,
     brand: "ProteinMax",
-    image: imgProduct11Jpg,
+    image: images.imgProduct11Jpg,
     badge: { text: "New", color: "bg-[#00B14F]" },
     isNew: true,
     isProtein: true
@@ -128,7 +133,7 @@ const productsData: Product[] = [
     oldPrice: 42.99,
     rating: 4.2,
     brand: "NutriBar",
-    image: imgProduct21Jpg,
+    image: images.imgProduct21Jpg,
     isProtein: true
   },
   {
@@ -140,7 +145,7 @@ const productsData: Product[] = [
     oldPrice: 32.99,
     rating: 4.3,
     brand: "SmoothieBlend",
-    image: imgProduct31Jpg,
+    image: images.imgProduct31Jpg,
     badge: { text: "Popular", color: "bg-[#FF7E1D]" },
     isProtein: true
   },
@@ -153,7 +158,7 @@ const productsData: Product[] = [
     oldPrice: 10.99,
     rating: 4.1,
     brand: "FreshJuice",
-    image: imgProduct41Jpg
+    image: images.imgProduct41Jpg
   },
   {
     id: 11,
@@ -164,7 +169,7 @@ const productsData: Product[] = [
     oldPrice: 6.99,
     rating: 4.4,
     brand: "TropicalFresh",
-    image: imgProduct51Jpg,
+    image: images.imgProduct51Jpg,
     badge: { text: "Natural", color: "bg-[#3bb77e]" }
   },
   {
@@ -176,7 +181,7 @@ const productsData: Product[] = [
     oldPrice: 4.99,
     rating: 3.9,
     brand: "EnergyBoost",
-    image: imgProduct61Jpg
+    image: images.imgProduct61Jpg
   }
 ];
 
