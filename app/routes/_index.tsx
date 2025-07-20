@@ -26,7 +26,7 @@ import Footer from "../ui/footer/footer";
 import { CartButton } from "../components/Cart";
 import { HeaderBar } from "../components/HeaderBar";
 import { BottomCartBar } from "../components/BottomCartBar";
-import { HomeSkeleton } from "../components/ProductSkeleton";
+import { HomeSkeleton } from "../features/home/components/home-skeleton";
 import { Button } from "../ui/button/button";
 import { Toaster } from "../ui/sonner/sonner";
 import { useDataFetching } from "../hooks/use-data-fetching";
