@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { useDataFetching } from "../hooks/useDataFetching";
-import { CheckoutSkeleton } from "./CheckoutSkeleton";
+import { Button } from "../../../ui/button/button";
+import { Input } from "../../../ui/input/input";
+import { Label } from "../../../ui/label/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../ui/select/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../../ui/accordion/accordion";
+import { ImageWithFallback } from "../../../ui/image-with-fallback/image-with-fallback";
+import { useDataFetching } from "../../../hooks/use-data-fetching";
+import { CheckoutSkeleton } from "./checkout-skeleton";
 import { Check, Plus, Minus, Trash2, ShoppingCart, ChevronRight, ChevronLeft, Lock, CheckCircle, MessageCircle, ArrowRight } from "lucide-react";
-import { useCart, type CartItem } from "../stores/cartStore";
-import { toast } from "sonner@2.0.3";
+import { useCart, type CartItem } from "../../../stores/cart-store";
+import { toast } from "sonner";
 
 interface CheckoutWizardProps {
   onBack?: () => void;
@@ -767,7 +767,7 @@ export function CheckoutWizard({
       case "cart":
         return cartItems.length > 0;
       case "personal-info":
-        return completedSteps.includes("personal-info") || (
+        return completedSteps.includes("personal-info") || !!(
           billingInfo.fullName.trim() && 
           billingInfo.phone.trim() && 
           billingInfo.address.trim() && 
