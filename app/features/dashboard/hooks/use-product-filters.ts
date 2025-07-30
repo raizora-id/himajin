@@ -1,5 +1,7 @@
 import { 
-  useQueryState,
+  useQueryState
+} from "~/lib/nuqs-config";
+import {
   parseAsString, 
   parseAsInteger,
   parseAsBoolean,

@@ -1,8 +1,17 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { Link, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react";
 import { ArrowLeft, Save } from "lucide-react";
 import { UserRole, getRoleLabel, getWarehousesFromUsers, mockUsers } from "~/features/dashboard/models/user.model";
+import { useForm, FieldErrors } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useEffect, useRef } from "react";
+import { Input } from "~/ui/input/input";
+import { Textarea } from "~/ui/textarea/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
+import { Button } from "~/ui/button/button";
+import { Label } from "~/ui/label/label";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [
@@ -76,6 +85,19 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   return redirect(`/dashboard/users/${id}`);
 };
 
+// Define user schema using Zod for validation
+const userSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Valid email address is required" }),
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  role: z.string().min(1, { message: "Role is required" }),
+  warehouseId: z.string().optional(),
+  isActive: z.boolean(),
+});
+
+type UserFormValues = z.infer<typeof userSchema>;
+
 function FormField({ 
   id, 
   label, 
@@ -108,6 +130,70 @@ export default function EditUser() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const formRef = useRef<HTMLFormElement>(null);
+  const submit = useSubmit();
+  
+  // Set up form with react-hook-form and zod resolver
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      name: user.name,
+      email: user.email,
+      phoneNumber: user.phoneNumber || "",
+      address: user.address || "",
+      role: user.role,
+      warehouseId: user.warehouseId || "",
+      isActive: user.isActive,
+    },
+  });
+  
+  // Handle form submission
+  const onSubmit = (data: UserFormValues) => {
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    formData.append('name', data.name);
+    formData.append('email', data.email);
+    formData.append('phoneNumber', data.phoneNumber || '');
+    formData.append('address', data.address || '');
+    formData.append('role', data.role);
+    formData.append('warehouseId', data.warehouseId || '');
+    formData.append('isActive', data.isActive.toString());
+    
+    submit(formData, { method: 'post' });
+  };
+  
+  // Handle validation errors and scroll to the first error field
+  const onError = (errors: FieldErrors<UserFormValues>) => {
+    const errorKeys = Object.keys(errors);
+    
+    if (errorKeys.length > 0) {
+      const firstErrorKey = errorKeys[0];
+      const errorElement = document.getElementById(firstErrorKey);
+      
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  };
+  
+  // Scroll to first error when form is submitted with errors
+  useEffect(() => {
+    const firstError = Object.keys(errors)[0];
+    if (firstError) {
+      const errorElement = document.getElementById(firstError);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  }, [errors]);
   
   return (
     <div className="space-y-6">
@@ -123,7 +209,7 @@ export default function EditUser() {
         <h2 className="text-2xl font-bold">Edit User</h2>
       </div>
       
-      <Form method="post" className="space-y-8">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit, onError)} method="post" className="space-y-8">
         <div className="grid grid-cols-1 gap-8">
           {/* User Information */}
           <div className="bg-card rounded-lg border border-border p-6">
@@ -133,78 +219,79 @@ export default function EditUser() {
               <FormField 
                 id="name" 
                 label="Full Name" 
-                error={actionData?.errors?.name}
+                error={errors?.name?.message}
                 required
               >
-                <input
+                <Input
                   id="name"
-                  name="name"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={user.name}
-                  required
+                  {...register("name")}
+                  aria-invalid={!!errors.name}
                 />
+                <input type="hidden" name="name" value={user.name} />
               </FormField>
               
               <FormField 
                 id="email" 
                 label="Email Address" 
-                error={actionData?.errors?.email}
+                error={errors?.email?.message}
                 required
               >
-                <input
+                <Input
                   id="email"
-                  name="email"
                   type="email"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={user.email}
-                  required
+                  {...register("email")}
+                  aria-invalid={!!errors.email}
                 />
+                <input type="hidden" name="email" value={user.email} />
               </FormField>
               
               <FormField 
                 id="phoneNumber" 
                 label="Phone Number" 
-                error={actionData?.errors?.phoneNumber}
+                error={errors?.phoneNumber?.message}
               >
-                <input
+                <Input
                   id="phoneNumber"
-                  name="phoneNumber"
                   type="tel"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={user.phoneNumber || ""}
+                  {...register("phoneNumber")}
+                  aria-invalid={!!errors.phoneNumber}
                 />
+                <input type="hidden" name="phoneNumber" value={user.phoneNumber || ""} />
               </FormField>
               
               <FormField 
                 id="isActive" 
                 label="Status" 
-                error={actionData?.errors?.isActive}
+                error={errors?.isActive?.message}
               >
-                <select
-                  id="isActive"
-                  name="isActive"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={user.isActive ? "true" : "false"}
+                <Select 
+                  onValueChange={(value) => setValue('isActive', value === 'true')}
+                  defaultValue={user.isActive ? 'true' : 'false'}
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
+                  <SelectTrigger id="isActive" aria-invalid={!!errors.isActive}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="isActive" value={user.isActive ? 'true' : 'false'} />
               </FormField>
               
               <div className="col-span-1 md:col-span-2">
                 <FormField 
                   id="address" 
                   label="Address" 
-                  error={actionData?.errors?.address}
+                  error={errors?.address?.message}
                 >
-                  <textarea
+                  <Textarea
                     id="address"
-                    name="address"
                     rows={3}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    defaultValue={user.address || ""}
+                    {...register("address")}
+                    aria-invalid={!!errors.address}
                   />
+                  <input type="hidden" name="address" value={user.address || ""} />
                 </FormField>
               </div>
             </div>
@@ -218,23 +305,25 @@ export default function EditUser() {
               <FormField 
                 id="role" 
                 label="User Role" 
-                error={actionData?.errors?.role}
+                error={errors?.role?.message}
                 required
               >
-                <select
-                  id="role"
-                  name="role"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select 
+                  onValueChange={(value) => setValue('role', value)}
                   defaultValue={user.role}
-                  required
                 >
-                  <option value="">Select Role</option>
-                  {options.roles.map(role => (
-                    <option key={role} value={role}>
-                      {getRoleLabel(role)}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="role" aria-invalid={!!errors.role}>
+                    <SelectValue placeholder="Select Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.roles.map(role => (
+                      <SelectItem key={role} value={role}>
+                        {getRoleLabel(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="role" value={user.role} />
                 <p className="text-xs text-muted-foreground mt-1">
                   The role defines what permissions the user will have in the system
                 </p>
@@ -243,21 +332,25 @@ export default function EditUser() {
               <FormField 
                 id="warehouseId" 
                 label="Warehouse Assignment" 
-                error={actionData?.errors?.warehouseId}
+                error={errors?.warehouseId?.message}
               >
-                <select
-                  id="warehouseId"
-                  name="warehouseId"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select 
+                  onValueChange={(value) => setValue('warehouseId', value)}
                   defaultValue={user.warehouseId || ""}
                 >
-                  <option value="">Global Access (All Warehouses)</option>
-                  {options.warehouses.map(warehouse => (
-                    <option key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="warehouseId" aria-invalid={!!errors.warehouseId}>
+                    <SelectValue placeholder="Select Warehouse" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Global Access (All Warehouses)</SelectItem>
+                    {options.warehouses.map(warehouse => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="warehouseId" value={user.warehouseId || ""} />
                 <p className="text-xs text-muted-foreground mt-1">
                   Restrict user access to a specific warehouse location
                 </p>
@@ -295,12 +388,14 @@ export default function EditUser() {
                     PNG, JPG or WEBP up to 1MB
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="mt-4 bg-muted text-foreground hover:bg-muted/80 h-9 px-4 py-2 rounded-md text-sm"
+                  variant="secondary"
+                  size="sm"
+                  className="mt-4"
                 >
                   Select Image
-                </button>
+                </Button>
                 <input
                   type="file"
                   id="avatar"
@@ -322,28 +417,34 @@ export default function EditUser() {
               Passwords can be reset from the user detail page by sending a password reset email
             </p>
             
-            <Link
-              to={`/dashboard/users/${user.id}/reset-password`}
-              className="bg-muted text-foreground hover:bg-muted/80 h-9 px-4 py-2 rounded-md text-sm inline-flex items-center"
+            <Button
+              variant="secondary"
+              size="sm"
+              asChild
             >
-              Send Password Reset Email
-            </Link>
+              <Link to={`/dashboard/users/${user.id}/reset-password`}>
+                Send Password Reset Email
+              </Link>
+            </Button>
           </div>
         </div>
         
         {/* Form Actions */}
         <div className="flex justify-end gap-4">
-          <Link
-            to={`/dashboard/users/${user.id}`}
-            className="bg-muted text-foreground hover:bg-muted/80 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors"
+          <Button
+            variant="outline"
+            type="button"
+            asChild
           >
-            Cancel
-          </Link>
+            <Link to={`/dashboard/users/${user.id}`}>
+              Cancel
+            </Link>
+          </Button>
           
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors disabled:opacity-70"
+            className="inline-flex items-center gap-2"
           >
             {isSubmitting ? (
               <>
@@ -356,9 +457,9 @@ export default function EditUser() {
                 Save Changes
               </>
             )}
-          </button>
+          </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }
