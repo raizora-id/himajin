@@ -21,4 +21,6 @@ export { Pagination } from './pagination';
 export { BoxesTable } from './boxes-table';
 export { DataTable } from './data-table';
 export { ProductsTable } from './products-table';
-export * from './product-filter-section';
+export { TransactionsTable } from './transactions-table';
+export { ProductFilterSection } from './product-filter-section';
+export { TransactionsFilterSection } from './transactions-filter-section';

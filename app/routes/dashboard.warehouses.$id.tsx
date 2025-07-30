@@ -53,7 +53,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       name: u.name,
       role: u.role,
       email: u.email,
-      phone: u.phone,
+      phone: u.phoneNumber,
     }));
   
   // Format dates
