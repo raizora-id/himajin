@@ -1,9 +1,18 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
-import { useState } from "react";
+import { Form, Link, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Save } from "lucide-react";
 import { mockProducts } from "~/features/dashboard/models/product.model";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Input } from "~/ui/input/input";
+import { Label } from "~/ui/label/label";
+import { Checkbox } from "~/ui/checkbox/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
+import { Textarea } from "~/ui/textarea/textarea";
+
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [
@@ -126,9 +135,9 @@ function FormField({
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="text-sm font-medium">
+      <Label htmlFor={id}>
         {label}
-      </label>
+      </Label>
       {children}
       {error && (
         <p className="text-destructive text-xs mt-1">{error}</p>
@@ -137,11 +146,109 @@ function FormField({
   );
 }
 
+// Product form schema using Zod for validation
+const productSchema = z.object({
+  name: z.string().min(3, { message: "Product name must be at least 3 characters" }),
+  sku: z.string().min(1, { message: "SKU is required" }),
+  barcode: z.string().optional(),
+  description: z.string().optional(),
+  price: z.coerce.number().positive({ message: "Price must be greater than zero" }),
+  cost: z.coerce.number().nonnegative({ message: "Cost cannot be negative" }),
+  stockQuantity: z.coerce.number().nonnegative({ message: "Stock quantity cannot be negative" }),
+  category: z.string().min(1, { message: "Category is required" }),
+  brand: z.string().optional(),
+  warehouseId: z.string().min(1, { message: "Warehouse is required" }),
+  boxId: z.string().optional(),
+  isActive: z.boolean(),
+  weight: z.coerce.number().nonnegative().optional(),
+  dimensions: z.object({
+    length: z.coerce.number().nonnegative().optional(),
+    width: z.coerce.number().nonnegative().optional(),
+    height: z.coerce.number().nonnegative().optional(),
+  }).optional(),
+});
+
+type ProductFormValues = z.infer<typeof productSchema>;
+
 export default function EditProduct() {
   const { product, options } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const formRef = useRef<HTMLFormElement>(null);
+  const submit = useSubmit();
+  
+  // Create form default values from product data
+  const defaultValues: Partial<ProductFormValues> = {
+    name: product.name,
+    sku: product.sku,
+    barcode: product.barcode || "",
+    description: product.description || "",
+    price: product.price,
+    cost: product.cost,
+    stockQuantity: product.stockQuantity,
+    category: product.category,
+    brand: product.brand || "",
+    warehouseId: product.warehouseId,
+    boxId: product.boxId || "",
+    isActive: product.isActive,
+    weight: product.weight || 0,
+    dimensions: product.dimensions || {
+      length: 0,
+      width: 0,
+      height: 0
+    }
+  };
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitSuccessful },
+    watch,
+    setValue,
+    control,
+  } = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema) as any, // Type cast to fix TS error
+    defaultValues,
+  });
+  
+  // Handle form submission
+  const onSubmit = (data: ProductFormValues) => {
+    // Create FormData to submit
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    Object.entries(data).forEach(([key, value]) => {
+      if (key === 'dimensions' && showDimensionsFields && value) {
+        // Handle dimensions object
+        Object.entries(value).forEach(([dimKey, dimValue]) => {
+          if (dimValue !== undefined) {
+            formData.append(dimKey, dimValue.toString());
+          }
+        });
+      } else if (key !== 'dimensions') {
+        // Handle all other fields
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
+        }
+      }
+    });
+    
+    // Submit the form
+    submit(formData, { method: 'post' });
+  };
+  
+  // Scroll to first error when form is submitted with errors
+  useEffect(() => {
+    const firstError = Object.keys(errors)[0];
+    if (firstError) {
+      const errorElement = document.getElementById(firstError);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  }, [errors]);
   
   const [showDimensionsFields, setShowDimensionsFields] = useState(!!product.dimensions);
   const [enableBarcode, setEnableBarcode] = useState(!!product.barcode);
@@ -160,7 +267,7 @@ export default function EditProduct() {
         <h2 className="text-2xl font-bold">Edit Product</h2>
       </div>
       
-      <Form method="post" className="space-y-8">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 gap-8">
           {/* Basic Information */}
           <div className="bg-card rounded-lg border border-border p-6">
@@ -170,30 +277,25 @@ export default function EditProduct() {
               <FormField 
                 id="name" 
                 label="Product Name" 
-                error={actionData?.errors?.name}
+                error={errors.name?.message?.toString() || actionData?.errors?.name}
               >
-                <input
+                <Input
                   id="name"
-                  name="name"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={product.name}
-                  required
+                  {...register("name")}
+                  aria-invalid={errors.name ? "true" : "false"}
                 />
               </FormField>
               
               <FormField 
                 id="sku" 
                 label="SKU" 
-                error={actionData?.errors?.sku}
+                error={errors.sku?.message?.toString() || actionData?.errors?.sku}
               >
-                <input
+                <Input
                   id="sku"
-                  name="sku"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono"
-                  defaultValue={product.sku}
-                  required
+                  {...register("sku")}
+                  className="font-mono"
+                  aria-invalid={errors.sku ? "true" : "false"}
                 />
               </FormField>
               
@@ -201,28 +303,32 @@ export default function EditProduct() {
                 <FormField 
                   id="barcode-toggle" 
                   label="Barcode" 
-                  error={actionData?.errors?.barcode}
+                  error={errors.barcode?.message?.toString() || actionData?.errors?.barcode}
                 >
                   <div className="flex items-center mb-2">
-                    <input
-                      id="barcode-toggle"
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-input"
-                      checked={enableBarcode}
-                      onChange={() => setEnableBarcode(!enableBarcode)}
-                    />
-                    <label htmlFor="barcode-toggle" className="ml-2 text-sm text-muted-foreground">
-                      Enable barcode
-                    </label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="barcode-toggle"
+                        checked={enableBarcode}
+                        onCheckedChange={(checked) => {
+                          setEnableBarcode(checked === true);
+                          if (!checked) {
+                            setValue('barcode', '');
+                          }
+                        }}
+                      />
+                      <Label htmlFor="barcode-toggle" className="text-sm text-muted-foreground">
+                        Enable barcode
+                      </Label>
+                    </div>
                   </div>
                   
                   {enableBarcode && (
-                    <input
+                    <Input
                       id="barcode"
-                      name="barcode"
-                      type="text"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono"
-                      defaultValue={product.barcode || ""}
+                      {...register("barcode")}
+                      className="font-mono"
+                      aria-invalid={errors.barcode ? "true" : "false"}
                     />
                   )}
                 </FormField>
@@ -232,14 +338,13 @@ export default function EditProduct() {
                 <FormField 
                   id="description" 
                   label="Description" 
-                  error={actionData?.errors?.description}
+                  error={errors.description?.message?.toString() || actionData?.errors?.description}
                 >
-                  <textarea
+                  <Textarea
                     id="description"
-                    name="description"
+                    {...register("description")}
                     rows={4}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    defaultValue={product.description}
+                    aria-invalid={errors.description ? "true" : "false"}
                   />
                 </FormField>
               </div>
@@ -249,7 +354,7 @@ export default function EditProduct() {
           {/* Pricing */}
           <div className="bg-card rounded-lg border border-border p-6">
             <h3 className="text-lg font-semibold mb-6">Pricing</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField 
                 id="price" 
@@ -260,15 +365,14 @@ export default function EditProduct() {
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     Rp
                   </span>
-                  <input
+                  <Input
                     id="price"
-                    name="price"
+                    {...register("price")}
                     type="number"
                     step="100"
                     min="0"
-                    className="w-full rounded-md border border-input bg-background pl-9 py-2"
-                    defaultValue={product.price}
-                    required
+                    className="pl-9"
+                    aria-invalid={errors.price ? "true" : "false"}
                   />
                 </div>
               </FormField>
@@ -282,14 +386,14 @@ export default function EditProduct() {
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
                     Rp
                   </span>
-                  <input
+                  <Input
                     id="cost"
-                    name="cost"
+                    {...register("cost")}
                     type="number"
                     step="100"
                     min="0"
-                    className="w-full rounded-md border border-input bg-background pl-9 py-2"
-                    defaultValue={product.cost}
+                    className="pl-9"
+                    aria-invalid={errors.cost ? "true" : "false"}
                   />
                 </div>
               </FormField>
@@ -306,13 +410,12 @@ export default function EditProduct() {
                 label="Stock Quantity" 
                 error={actionData?.errors?.stockQuantity}
               >
-                <input
+                <Input
                   id="stockQuantity"
-                  name="stockQuantity"
+                  {...register("stockQuantity")}
                   type="number"
                   min="0"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={product.stockQuantity}
+                  aria-invalid={errors.stockQuantity ? "true" : "false"}
                 />
               </FormField>
               
@@ -321,20 +424,24 @@ export default function EditProduct() {
                 label="Warehouse" 
                 error={actionData?.errors?.warehouseId}
               >
-                <select
-                  id="warehouseId"
-                  name="warehouseId"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select
                   defaultValue={product.warehouseId}
-                  required
+                  onValueChange={(value) => setValue("warehouseId", value)}
                 >
-                  <option value="">Select Warehouse</option>
-                  {options.warehouses.map(warehouse => (
-                    <option key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="warehouseId"
+                    aria-invalid={errors.warehouseId ? "true" : "false"}
+                  >
+                    <SelectValue placeholder="Select Warehouse" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.warehouses.map(warehouse => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormField>
               
               <FormField 
@@ -342,19 +449,25 @@ export default function EditProduct() {
                 label="Box / Location" 
                 error={actionData?.errors?.boxId}
               >
-                <select
-                  id="boxId"
-                  name="boxId"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select
                   defaultValue={product.boxId || ""}
+                  onValueChange={(value) => setValue("boxId", value)}
                 >
-                  <option value="">No Box Assigned</option>
-                  {options.boxes.map(box => (
-                    <option key={box.id} value={box.id}>
-                      {box.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="boxId"
+                    aria-invalid={errors.boxId ? "true" : "false"}
+                  >
+                    <SelectValue placeholder="No Box Assigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Box Assigned</SelectItem>
+                    {options.boxes.map(box => (
+                      <SelectItem key={box.id} value={box.id || ""}>
+                        {box.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormField>
               
               <FormField 
@@ -362,15 +475,18 @@ export default function EditProduct() {
                 label="Status" 
                 error={actionData?.errors?.isActive}
               >
-                <select
-                  id="isActive"
-                  name="isActive"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select
                   defaultValue={product.isActive ? "true" : "false"}
+                  onValueChange={(value) => setValue("isActive", value === "true")}
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
+                  <SelectTrigger id="isActive">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormField>
             </div>
           </div>
@@ -385,20 +501,24 @@ export default function EditProduct() {
                 label="Category" 
                 error={actionData?.errors?.category}
               >
-                <select
-                  id="category"
-                  name="category"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select
                   defaultValue={product.category}
-                  required
+                  onValueChange={(value) => setValue("category", value)}
                 >
-                  <option value="">Select Category</option>
-                  {options.categories.map(category => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="category"
+                    aria-invalid={errors.category ? "true" : "false"}
+                  >
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.categories.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormField>
               
               <FormField 
@@ -406,12 +526,10 @@ export default function EditProduct() {
                 label="Brand" 
                 error={actionData?.errors?.brand}
               >
-                <input
+                <Input
                   id="brand"
-                  name="brand"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={product.brand || ""}
+                  {...register("brand")}
+                  aria-invalid={errors.brand ? "true" : "false"}
                 />
               </FormField>
             </div>
@@ -427,29 +545,35 @@ export default function EditProduct() {
                 label="Weight (grams)" 
                 error={actionData?.errors?.weight}
               >
-                <input
+                <Input
                   id="weight"
-                  name="weight"
+                  {...register("weight")}
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue={product.weight || ""}
+                  aria-invalid={errors.weight ? "true" : "false"}
                 />
               </FormField>
               
               <div>
                 <div className="flex items-center mb-4">
-                  <input
-                    id="dimensions-toggle"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-input"
-                    checked={showDimensionsFields}
-                    onChange={() => setShowDimensionsFields(!showDimensionsFields)}
-                  />
-                  <label htmlFor="dimensions-toggle" className="ml-2 text-sm font-medium">
-                    Specify Dimensions
-                  </label>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="dimensions-toggle"
+                      checked={showDimensionsFields}
+                      onCheckedChange={(checked) => {
+                        setShowDimensionsFields(checked === true);
+                        if (!checked) {
+                          setValue('dimensions.length', 0);
+                          setValue('dimensions.width', 0);
+                          setValue('dimensions.height', 0);
+                        }
+                      }}
+                    />
+                    <Label htmlFor="dimensions-toggle">
+                      Specify Dimensions
+                    </Label>
+                  </div>
                 </div>
                 
                 {showDimensionsFields && (
@@ -459,14 +583,13 @@ export default function EditProduct() {
                       label="Length (cm)" 
                       error={actionData?.errors?.length}
                     >
-                      <input
+                      <Input
                         id="length"
-                        name="length"
+                        {...register("dimensions.length")}
                         type="number"
                         min="0"
                         step="0.1"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        defaultValue={product.dimensions?.length || ""}
+                        aria-invalid={errors.dimensions?.length ? "true" : "false"}
                       />
                     </FormField>
                     
@@ -475,14 +598,13 @@ export default function EditProduct() {
                       label="Width (cm)" 
                       error={actionData?.errors?.width}
                     >
-                      <input
+                      <Input
                         id="width"
-                        name="width"
+                        {...register("dimensions.width")}
                         type="number"
                         min="0"
                         step="0.1"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        defaultValue={product.dimensions?.width || ""}
+                        aria-invalid={errors.dimensions?.width ? "true" : "false"}
                       />
                     </FormField>
                     
@@ -491,14 +613,13 @@ export default function EditProduct() {
                       label="Height (cm)" 
                       error={actionData?.errors?.height}
                     >
-                      <input
+                      <Input
                         id="height"
-                        name="height"
+                        {...register("dimensions.height")}
                         type="number"
                         min="0"
                         step="0.1"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        defaultValue={product.dimensions?.height || ""}
+                        aria-invalid={errors.dimensions?.height ? "true" : "false"}
                       />
                     </FormField>
                   </div>
@@ -535,7 +656,7 @@ export default function EditProduct() {
             )}
           </button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }

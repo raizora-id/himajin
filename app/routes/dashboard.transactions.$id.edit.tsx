@@ -1,11 +1,26 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { Link, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react";
 import { ArrowLeft, MinusCircle, PlusCircle, Save, Trash } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PaymentMethod, TransactionStatus, getPaymentMethodLabel, getStatusLabel, mockTransactions } from "~/features/dashboard/models/transaction.model";
 import { mockUsers } from "~/features/dashboard/models/user.model";
 import { mockProducts } from "~/features/dashboard/models/product.model";
+import { useForm, FieldErrors } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Input } from "~/ui/input/input";
+import { Label } from "~/ui/label/label";
+import { Textarea } from "~/ui/textarea/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
+import { Button } from "~/ui/button/button";
+import { cn } from "~/lib/utils";
+
+// Helper functions
+const formatDateForInput = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toISOString().split('T')[0];
+};
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [
@@ -91,6 +106,36 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   return redirect(`/dashboard/transactions/${id}`);
 };
 
+// Define transaction schema using Zod for validation
+const transactionItemSchema = z.object({
+  id: z.string(),
+  productId: z.string().min(1, { message: "Product is required" }),
+  productName: z.string(),
+  productSku: z.string(),
+  price: z.coerce.number().positive({ message: "Price must be greater than zero" }),
+  quantity: z.coerce.number().positive({ message: "Quantity must be at least 1" }),
+  discount: z.coerce.number().nonnegative({ message: "Discount cannot be negative" }),
+  total: z.coerce.number()
+});
+
+const transactionSchema = z.object({
+  invoiceNumber: z.string(),
+  transactionDate: z.string().min(1, { message: "Date is required" }),
+  dueDate: z.string().optional(),
+  customerName: z.string().optional(),
+  userId: z.string().min(1, { message: "Cashier is required" }),
+  status: z.string().min(1, { message: "Status is required" }),
+  paymentMethod: z.string().min(1, { message: "Payment method is required" }),
+  note: z.string().optional(),
+  items: z.array(transactionItemSchema),
+  subtotal: z.coerce.number(),
+  tax: z.coerce.number(),
+  discount: z.coerce.number().nonnegative(),
+  grandTotal: z.coerce.number()
+});
+
+type TransactionFormValues = z.infer<typeof transactionSchema>;
+
 function FormField({ 
   id, 
   label, 
@@ -106,10 +151,10 @@ function FormField({
 }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="text-sm font-medium flex items-center gap-1">
+      <Label htmlFor={id} className="flex items-center gap-1">
         {label}
         {required && <span className="text-destructive">*</span>}
-      </label>
+      </Label>
       {children}
       {error && (
         <p className="text-destructive text-xs mt-1">{error}</p>
@@ -119,10 +164,21 @@ function FormField({
 }
 
 export default function EditTransaction() {
-  const { transaction, options, formatCurrency } = useLoaderData<typeof loader>();
+  const { transaction, options } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const formRef = useRef<HTMLFormElement>(null);
+  const submit = useSubmit();
+  
+  // Format currency function
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
   
   // State for transaction items
   const [items, setItems] = useState(transaction.items);
@@ -133,68 +189,155 @@ export default function EditTransaction() {
     grandTotal: transaction.grandTotal
   });
   
+  // Create form default values from transaction data
+  const defaultValues: Partial<TransactionFormValues> = {
+    invoiceNumber: transaction.invoiceNumber,
+    transactionDate: formatDateForInput(transaction.transactionDate),
+    customerName: transaction.customerName || "",
+    userId: transaction.userId,
+    status: transaction.status,
+    paymentMethod: transaction.paymentMethod,
+    note: transaction.note || "",
+    items: transaction.items,
+    subtotal: transaction.total,
+    tax: transaction.tax,
+    discount: transaction.discount,
+    grandTotal: transaction.grandTotal
+  };
+  
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitSuccessful },
+    setValue,
+    control,
+    watch,
+  } = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionSchema) as any, // Type cast to fix TS error
+    defaultValues,
+  });
+  
+  // Handle form submission
+  const onSubmit = (data: TransactionFormValues) => {
+    const formData = new FormData();
+    
+    // Add basic transaction fields
+    formData.append('invoiceNumber', data.invoiceNumber);
+    formData.append('transactionDate', data.transactionDate);
+    formData.append('dueDate', data.dueDate ? data.dueDate : '');
+    formData.append('status', data.status);
+    formData.append('paymentMethod', data.paymentMethod);
+    formData.append('note', data.note || '');
+    
+    // Add transaction items
+    data.items.forEach((item, index) => {
+      formData.append(`items[${index}].id`, item.id);
+      formData.append(`items[${index}].productId`, item.productId);
+      formData.append(`items[${index}].productName`, item.productName);
+      formData.append(`items[${index}].productSku`, item.productSku);
+      formData.append(`items[${index}].price`, item.price.toString());
+      formData.append(`items[${index}].quantity`, item.quantity.toString());
+      formData.append(`items[${index}].discount`, item.discount.toString());
+      formData.append(`items[${index}].total`, item.total.toString());
+    });
+    
+    // Add summary fields
+    formData.append('subtotal', totals.subtotal.toString());
+    formData.append('totalDiscount', totals.discount.toString());
+    formData.append('tax', totals.tax.toString());
+    formData.append('totalAmount', totals.grandTotal.toString());
+    
+    submit(formData, { method: 'post' });
+  };
+  
+  // Handle validation errors and scroll to the first error field
+  const onError = (errors: FieldErrors<TransactionFormValues>) => {
+    const errorKeys = Object.keys(errors);
+    
+    if (errorKeys.length > 0) {
+      const firstErrorKey = errorKeys[0];
+      const errorElement = document.getElementById(firstErrorKey);
+      
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  };
+  
+  // Scroll to first error when form is submitted with errors
+  useEffect(() => {
+    const firstError = Object.keys(errors)[0];
+    if (firstError) {
+      const errorElement = document.getElementById(firstError);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  }, [errors]);
+  
   // Handle adding a new item
   const addItem = () => {
     const newItem = {
-      id: `new-item-${Date.now()}`,
+      id: Math.random().toString(36).substring(2, 11),
       productId: "",
       productName: "",
       productSku: "",
-      quantity: 1,
       price: 0,
+      quantity: 1,
       discount: 0,
       total: 0
     };
-    setItems([...items, newItem]);
+    
+    setItems(prev => [...prev, newItem]);
+    
+    // Update form values
+    const currentItems = [...items, newItem];
+    setValue('items', currentItems);
   };
   
   // Handle removing an item
   const removeItem = (itemId: string) => {
-    const updatedItems = items.filter(item => item.id !== itemId);
-    setItems(updatedItems);
-    
-    // Recalculate totals
-    calculateTotals(updatedItems);
+    const newItems = items.filter(item => item.id !== itemId);
+    setItems(newItems);
+    setValue('items', newItems);
+    calculateTotals(newItems);
   };
   
   // Handle item field changes
   const updateItem = (itemId: string, field: string, value: string | number) => {
     const updatedItems = items.map(item => {
-      if (item.id === itemId) {
-        const updatedItem = { ...item, [field]: value };
-        
-        // If updating product, also update related fields
-        if (field === "productId" && typeof value === "string") {
-          const product = options.products.find(p => p.id === value);
-          if (product) {
-            updatedItem.productName = product.name;
-            updatedItem.productSku = product.sku;
-            updatedItem.price = product.price;
-            updatedItem.total = product.price * updatedItem.quantity;
-          }
+      if (item.id !== itemId) return item;
+      
+      const updatedItem = { ...item, [field]: value };
+      
+      // If product ID is updated, update product name and sku as well
+      if (field === "productId" && typeof value === "string") {
+        const selectedProduct = options.products.find(p => p.id === value);
+        if (selectedProduct) {
+          updatedItem.productName = selectedProduct.name;
+          updatedItem.productSku = selectedProduct.sku;
+          updatedItem.price = selectedProduct.price;
         }
-        
-        // If updating quantity or price, recalculate total
-        if (field === "quantity" || field === "price" || field === "discount") {
-          updatedItem.total = (updatedItem.price * updatedItem.quantity) - (updatedItem.discount || 0);
-        }
-        
-        return updatedItem;
       }
-      return item;
+      
+      // Recalculate item total
+      updatedItem.total = (updatedItem.price * updatedItem.quantity) - updatedItem.discount;
+      
+      return updatedItem;
     });
     
     setItems(updatedItems);
-    
-    // Recalculate totals
+    setValue('items', updatedItems);
     calculateTotals(updatedItems);
   };
   
   // Calculate transaction totals
   const calculateTotals = (currentItems = items) => {
     const subtotal = currentItems.reduce((sum, item) => sum + item.total, 0);
-    const tax = Math.round(subtotal * 0.1); // 10% tax rate
-    const discount = transaction.discount; // Keep original discount
+    const tax = Math.round(subtotal * 0.1); // 10% tax
+    const discount = totals.discount; // Keep existing discount
     const grandTotal = subtotal + tax - discount;
     
     setTotals({
@@ -203,12 +346,11 @@ export default function EditTransaction() {
       discount,
       grandTotal
     });
-  };
-  
-  // Format date for the date input
-  const formatDateForInput = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    
+    // Update form values
+    setValue('subtotal', subtotal);
+    setValue('tax', tax);
+    setValue('grandTotal', grandTotal);
   };
   
   return (
@@ -225,7 +367,7 @@ export default function EditTransaction() {
         <h2 className="text-2xl font-bold">Edit Transaction: {transaction.invoiceNumber}</h2>
       </div>
       
-      <Form method="post" className="space-y-8">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit, onError)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Transaction Information */}
           <div className="md:col-span-2 space-y-6">
@@ -236,29 +378,32 @@ export default function EditTransaction() {
                 <FormField 
                   id="invoiceNumber" 
                   label="Invoice Number" 
-                  error={actionData?.errors?.invoiceNumber}
+                  required
+                  error={errors.invoiceNumber?.message}
                 >
-                  <input
+                  <Input
                     id="invoiceNumber"
-                    name="invoiceNumber"
-                    type="text"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    {...register('invoiceNumber')}
+                    className="w-full"
                     defaultValue={transaction.invoiceNumber}
                     readOnly
+                    aria-invalid={!!errors.invoiceNumber}
                   />
                 </FormField>
                 
                 <FormField 
                   id="transactionDate" 
-                  label="Transaction Date" 
-                  error={actionData?.errors?.transactionDate}
+                  label="Transaction Date"
+                  required
+                  error={errors.transactionDate?.message}
                 >
-                  <input
-                    id="transactionDate"
-                    name="transactionDate"
+                  <Input
                     type="date"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                    id="transactionDate"
+                    {...register('transactionDate')}
+                    className="w-full"
                     defaultValue={formatDateForInput(transaction.transactionDate)}
+                    aria-invalid={!!errors.transactionDate}
                   />
                 </FormField>
                 
@@ -299,58 +444,72 @@ export default function EditTransaction() {
                 
                 <FormField 
                   id="status" 
-                  label="Status" 
-                  error={actionData?.errors?.status}
+                  label="Status"
                   required
+                  error={errors.status?.message}
                 >
-                  <select
-                    id="status"
-                    name="status"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  <Select
                     defaultValue={transaction.status}
-                    required
+                    onValueChange={(value) => setValue('status', value)}
                   >
-                    {options.statuses.map(status => (
-                      <option key={status} value={status}>
-                        {getStatusLabel(status)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger 
+                      id="status"
+                      className="w-full" 
+                      aria-invalid={!!errors.status}
+                    >
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.statuses.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {getStatusLabel(status)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormField>
                 
                 <FormField 
                   id="paymentMethod" 
-                  label="Payment Method" 
-                  error={actionData?.errors?.paymentMethod}
+                  label="Payment Method"
                   required
+                  error={errors.paymentMethod?.message}
                 >
-                  <select
-                    id="paymentMethod"
-                    name="paymentMethod"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  <Select
                     defaultValue={transaction.paymentMethod}
-                    required
+                    onValueChange={(value) => setValue('paymentMethod', value)}
                   >
-                    {options.paymentMethods.map(method => (
-                      <option key={method} value={method}>
-                        {getPaymentMethodLabel(method)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger 
+                      id="paymentMethod"
+                      className="w-full" 
+                      aria-invalid={!!errors.paymentMethod}
+                    >
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.paymentMethods.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {getPaymentMethodLabel(method)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </FormField>
                 
                 <div className="md:col-span-2">
                   <FormField 
                     id="note" 
                     label="Note" 
-                    error={actionData?.errors?.note}
+                    error={errors.note?.message}
                   >
-                    <textarea
+                    <Textarea
                       id="note"
-                      name="note"
+                      {...register('note')}
                       rows={3}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      className="w-full"
+                      placeholder="Add a note about this transaction"
                       defaultValue={transaction.note || ""}
+                      aria-invalid={!!errors.note}
                     />
                   </FormField>
                 </div>
@@ -361,17 +520,18 @@ export default function EditTransaction() {
             <div className="bg-card rounded-lg border border-border p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Transaction Items</h3>
-                <button 
+                <Button
                   type="button"
                   onClick={addItem}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 py-1 rounded-md text-sm inline-flex items-center gap-2"
+                  size="sm"
+                  className="inline-flex items-center gap-2"
                 >
                   <PlusCircle className="h-4 w-4" />
                   Add Item
-                </button>
+                </Button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-8">
                 {items.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     No items in this transaction. Add some items above.
@@ -392,19 +552,28 @@ export default function EditTransaction() {
                     {items.map((item, index) => (
                       <div key={item.id} className="grid grid-cols-12 gap-3 items-center">
                         <div className="col-span-4">
-                          <select
-                            name={`items[${index}].productId`}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          <Select
                             value={item.productId}
-                            onChange={(e) => updateItem(item.id, "productId", e.target.value)}
+                            onValueChange={(value) => updateItem(item.id, "productId", value)}
                           >
-                            <option value="">Select Product</option>
-                            {options.products.map(product => (
-                              <option key={product.id} value={product.id}>
-                                {product.name} ({product.sku})
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger 
+                              className="w-full text-sm"
+                            >
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {options.products.map(product => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} ({product.sku})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <input 
+                            type="hidden"
+                            name={`items[${index}].productId`}
+                            value={item.productId}
+                          />
                           <input 
                             type="hidden" 
                             name={`items[${index}].id`} 
@@ -423,34 +592,44 @@ export default function EditTransaction() {
                         </div>
                         
                         <div className="col-span-2">
-                          <input
+                          <Input
                             type="number"
-                            name={`items[${index}].price`}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            className="w-full text-sm"
                             value={item.price}
                             onChange={(e) => updateItem(item.id, "price", parseFloat(e.target.value) || 0)}
                           />
-                        </div>
-                        
-                        <div className="col-span-2">
                           <input
-                            type="number"
-                            name={`items[${index}].quantity`}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(item.id, "quantity", parseInt(e.target.value) || 1)}
+                            type="hidden"
+                            name={`items[${index}].price`}
+                            value={item.price}
                           />
                         </div>
                         
                         <div className="col-span-2">
-                          <input
+                          <Input
                             type="number"
-                            name={`items[${index}].discount`}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            min="0"
+                            className="w-full text-sm"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(item.id, "quantity", parseInt(e.target.value) || 0)}
+                          />
+                          <input
+                            type="hidden"
+                            name={`items[${index}].quantity`}
+                            value={item.quantity}
+                          />
+                        </div>
+                        
+                        <div className="col-span-2">
+                          <Input
+                            type="number"
+                            className="w-full text-sm"
                             value={item.discount}
                             onChange={(e) => updateItem(item.id, "discount", parseFloat(e.target.value) || 0)}
+                          />
+                          <input
+                            type="hidden"
+                            name={`items[${index}].discount`}
+                            value={item.discount}
                           />
                         </div>
                         
@@ -464,14 +643,16 @@ export default function EditTransaction() {
                         </div>
                         
                         <div className="col-span-1 flex justify-end">
-                          <button
+                          <Button
                             type="button"
                             onClick={() => removeItem(item.id)}
-                            className="text-muted-foreground hover:text-destructive"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
                             title="Remove Item"
                           >
                             <MinusCircle className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -583,10 +764,10 @@ export default function EditTransaction() {
             Cancel
           </Link>
           
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors disabled:opacity-70"
+            className="inline-flex items-center gap-2 w-full"
           >
             {isSubmitting ? (
               <>
@@ -599,9 +780,9 @@ export default function EditTransaction() {
                 Save Changes
               </>
             )}
-          </button>
+          </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }
