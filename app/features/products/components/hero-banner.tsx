@@ -1,5 +1,5 @@
-import imgBanner1Png from "figma:asset/04f716d99245eacb0ea40bec876d1f6fef0f7a37.png";
-import imgBanner2Png from "figma:asset/81e2d2dab3a741ea7f4d7cecc6d5315cb77be123.png";
+import svgPaths from "../../../ui/icons/icon-svg";
+
 import { useDataFetching } from "../../../hooks/use-data-fetching";
 import { HeroBannersSkeleton } from "./hero-banner-skeleton";
 import {
@@ -18,22 +18,22 @@ interface Banner {
 
 const bannersData: Banner[] = [
   {
-    image: imgBanner1Png,
+    image: "https://github.com/user-attachments/assets/5630d238-1a9e-42af-b281-ee57f938dea8",
     title: "Everyday Fresh &",
     subtitle: "Clean with Our Products"
   },
   {
-    image: imgBanner2Png,
+    image: "https://github.com/user-attachments/assets/fa4a3ade-a409-4dd9-9066-7ac64872a361",
     title: "Make your Breakfast",
     subtitle: "Healthy and Easy"
   },
   {
-    image: imgBanner1Png,
+    image: "https://github.com/user-attachments/assets/5630d238-1a9e-42af-b281-ee57f938dea8",
     title: "Premium Quality",
     subtitle: "Products for Your Pets"
   },
   {
-    image: imgBanner2Png,
+    image: "https://github.com/user-attachments/assets/fa4a3ade-a409-4dd9-9066-7ac64872a361",
     title: "Organic & Natural",
     subtitle: "Food Selection"
   }
@@ -46,6 +46,18 @@ function ShopNowButton() {
         <span className="font-bold text-primary-foreground text-[11px] tracking-[0.5px]">
           Shop Now
         </span>
+        <div className="flex items-center justify-center w-3 h-3">
+          <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 21 1">
+            <g clipPath="url(#clip0_2_316)">
+              <path d={svgPaths.p2a480380} fill="white" />
+            </g>
+            <defs>
+              <clipPath id="clip0_2_316">
+                <rect fill="white" height="1" width="20.1556" />
+              </clipPath>
+            </defs>
+          </svg>
+        </div>
       </div>
     </div>
   );

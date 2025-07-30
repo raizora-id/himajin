@@ -3,15 +3,18 @@ import { ChevronLeft, ChevronRight, ShoppingCart, Minus, Plus, Star } from "luci
 import { Button } from "../../../ui/button/button";
 import { Badge } from "../../../ui/badge/badge";
 import { Separator } from "../../../ui/separator/separator";
-import img9Jpg from "figma:asset/39fe4d9aaffa21f32951025416cb5a37b7376e47.png";
-import img10Jpg from "figma:asset/6351169aebf88338d08abbbb3a9fa63eca161843.png";
-import img11Jpg from "figma:asset/cfcb3234ed6cb2e515b6a9c8d624bd808702940a.png";
-import img12Jpg from "figma:asset/6dd5b5ce305fa1b6669c4f8d0b5d973eed04e63c.png";
-import img13Jpg from "figma:asset/6c1e4fe1d61aea903df7f0a467c64fb20c218c67.png";
-import { useDataFetching } from "../../../hooks/use-data-fetching";
+import { useDataFetching } from "../hooks/use-data-fetching";
 import { ProductDetailSkeleton } from "./product-detail-skeleton";
 import { useCart } from "../../../stores/cart-store";
 import { toast } from "sonner";
+
+const images = {
+  img9Jpg: "https://github.com/user-attachments/assets/16f5772a-9343-4669-a355-42d528d07886",
+  img10Jpg: "https://github.com/user-attachments/assets/8f74fe92-8217-4a56-8f77-3b25d984f023",
+  img11Jpg: "https://github.com/user-attachments/assets/970aff25-a79f-4ba2-b543-42eada120aca",
+  img12Jpg: "https://github.com/user-attachments/assets/404ddd64-72c1-4004-9310-2c8292978dc1",
+  img13Jpg: "https://github.com/user-attachments/assets/d084302c-ea90-4e3e-8ae2-9c37950ea885",
+}
 
 interface ProductDetailInfo {
   id: number;
@@ -51,7 +54,7 @@ const productDetailData: ProductDetailInfo = {
   originalPrice: 123.25,
   rating: 4.5,
   reviews: 128,
-  images: [img9Jpg, img10Jpg, img11Jpg, img12Jpg, img13Jpg],
+  images: [images.img9Jpg, images.img10Jpg, images.img11Jpg, images.img12Jpg, images.img13Jpg],
   sizes: [
     { label: "50kg", value: "50", selected: true },
     { label: "80kg", value: "80" },

@@ -4,7 +4,7 @@ import { ImageWithFallback } from "../../ui/image-with-fallback/image-with-fallb
 import { useCart } from "../../stores/cart-store";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../../ui/sheet/sheet";
 import { Badge } from "../../ui/badge/badge";
-import { Trash2, Plus, Minus, ShoppingCart, Check } from "lucide-react";
+import { Trash2, Plus, Minus, ShoppingCart, X, Check } from "lucide-react";
 
 export function CartButton() {
   const { itemCount } = useCart();
