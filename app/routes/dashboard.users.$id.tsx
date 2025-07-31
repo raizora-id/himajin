@@ -5,6 +5,11 @@ import { ArrowLeft, Calendar, Mail, MapPin, Phone, Pencil } from "lucide-react";
 import { formatDate } from "~/lib/utils";
 import { UserRole, getRoleLabel, mockUsers } from "~/features/dashboard/models/user.model";
 
+// Shadcn UI Components
+import { Button } from "~/ui/button/button";
+import { Badge } from "~/ui/badge/badge";
+import { Separator } from "~/ui/separator/separator";
+
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [
     { title: `${data?.user.name || 'User Details'} - POS System` },
@@ -53,24 +58,27 @@ export default function UserDetail() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <Link
-            to="/dashboard/users"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mb-2 pl-0 hover:bg-transparent hover:text-foreground"
+            asChild
           >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to Users
-          </Link>
+            <Link to="/dashboard/users" className="inline-flex items-center text-muted-foreground">
+              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              Back to Users
+            </Link>
+          </Button>
           <h2 className="text-2xl font-bold">{user.name}</h2>
           <p className="text-muted-foreground">{user.email}</p>
         </div>
         
-        <Link
-          to={`/dashboard/users/${user.id}/edit`}
-          className="inline-flex items-center bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md gap-2 transition-colors"
-        >
-          <Pencil className="h-4 w-4" />
-          Edit User
-        </Link>
+        <Button asChild className="inline-flex items-center gap-2">
+          <Link to={`/dashboard/users/${user.id}/edit`}>
+            <Pencil className="h-4 w-4" />
+            Edit User
+          </Link>
+        </Button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -94,17 +102,19 @@ export default function UserDetail() {
             <h3 className="text-lg font-semibold">{user.name}</h3>
             <p className="text-sm text-muted-foreground mb-3">{user.email}</p>
             
-            <div className="inline-block rounded-full px-3 py-1 text-xs mb-4 font-medium border border-border">
+            <Badge variant="outline" className="mb-3">
               <span className={`inline-block rounded-full w-2 h-2 ${user.isActive ? "bg-green-500" : "bg-red-500"} mr-1.5`}></span>
               {user.isActive ? "Active" : "Inactive"}
-            </div>
+            </Badge>
             
-            <div className={`inline-block rounded-full px-3 py-1 text-xs ${getRoleBadgeStyles(user.role as UserRole)}`}>
+            <Badge variant="secondary" className={getRoleBadgeStyles(user.role as UserRole)}>
               {getRoleLabel(user.role as UserRole)}
-            </div>
+            </Badge>
           </div>
           
-          <div className="border-t border-border p-6 space-y-4">
+          <div className="p-6 space-y-4">
+            <Separator className="mb-4" />
+            
             {user.phoneNumber && (
               <DetailItem 
                 label="Phone" 
@@ -122,16 +132,18 @@ export default function UserDetail() {
             )}
             
             <DetailItem 
-              label="Created On" 
+              label="Joined On" 
               value={formatDate(user.createdAt)}
               icon={<Calendar className="h-3.5 w-3.5" />}
             />
             
-            <DetailItem 
-              label="Last Updated" 
-              value={formatDate(user.updatedAt)}
-              icon={<Calendar className="h-3.5 w-3.5" />}
-            />
+            {user.email && (
+              <DetailItem 
+                label="Email" 
+                value={user.email}
+                icon={<Mail className="h-3.5 w-3.5" />}
+              />
+            )}
           </div>
         </div>
         
@@ -146,9 +158,9 @@ export default function UserDetail() {
                 <DetailItem 
                   label="Role" 
                   value={
-                    <span className={`inline-block rounded-full px-2 py-1 text-xs ${getRoleBadgeStyles(user.role as UserRole)}`}>
+                    <Badge variant="secondary">
                       {getRoleLabel(user.role as UserRole)}
-                    </span>
+                    </Badge>
                   }
                 />
                 
@@ -165,38 +177,38 @@ export default function UserDetail() {
                 <DetailItem 
                   label="Account Status" 
                   value={
-                    <span className={`inline-block rounded-full px-2 py-1 text-xs ${
-                      user.isActive
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}>
+                    <Badge variant={user.isActive ? "outline" : "secondary"} className={user.isActive ? "border-green-500 text-green-700" : "bg-red-100 hover:bg-red-100 text-red-700"}>
+                      <span className={`inline-block rounded-full w-2 h-2 ${user.isActive ? "bg-green-500" : "bg-red-500"} mr-1.5`}></span>
                       {user.isActive ? "Active" : "Inactive"}
-                    </span>
+                    </Badge>
                   }
                 />
               </div>
-            </div>
-          </div>
-          
-          {/* Permission Summary */}
-          <div className="bg-card rounded-lg border border-border overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Permission Summary</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                {getPermissionsByRole(user.role as UserRole).map((permission, index) => (
-                  <div key={index} className="flex items-start">
-                    <div className={`w-5 h-5 rounded-full ${permission.granted ? "bg-green-100" : "bg-red-100"} flex items-center justify-center mr-3 mt-0.5`}>
-                      <span className={`text-sm ${permission.granted ? "text-green-600" : "text-red-600"}`}>
-                        {permission.granted ? "✓" : "✕"}
-                      </span>
+              <Separator className="my-6" />
+              
+              <h4 className="text-sm font-medium mb-4">Permissions</h4>
+              
+              <div className="space-y-4">
+                {getPermissionsByRole(user.role as UserRole).slice(0, 4).map((permission, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className={`rounded-full w-5 h-5 flex items-center justify-center mt-0.5 ${permission.granted ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                      {permission.granted ? '✓' : '✗'}
                     </div>
                     <div>
-                      <p className="font-medium">{permission.name}</p>
-                      <p className="text-sm text-muted-foreground">{permission.description}</p>
+                      <h4 className="text-sm font-medium">{permission.name}</h4>
+                      <p className="text-xs text-muted-foreground">{permission.description}</p>
                     </div>
                   </div>
                 ))}
+              </div>
+              
+              <div className="flex justify-end mt-6">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={`/dashboard/users/${user.id}/permissions`}>
+                    View All Permissions
+                  </Link>
+                </Button>
               </div>
             </div>
           </div>
@@ -204,49 +216,64 @@ export default function UserDetail() {
           {/* Activity */}
           <div className="bg-card rounded-lg border border-border overflow-hidden">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Recent Activity</h3>
-                <Link 
-                  to={`/dashboard/users/${user.id}/activity`} 
-                  className="text-sm text-primary hover:underline"
-                >
-                  View All
-                </Link>
+                <Button variant="link" size="sm" asChild className="p-0 h-auto text-primary hover:no-underline">
+                  <Link to={`/dashboard/users/${user.id}/activity`}>
+                    View All
+                  </Link>
+                </Button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* This would be real activity data in a real app */}
                 {[
                   {
                     action: "Logged in",
                     date: user.lastLoginAt || new Date().toISOString(),
-                    details: "Successful login from 192.168.1.1"
+                    details: "Successful login from 192.168.1.1",
+                    type: "login"
                   },
                   {
                     action: "Updated profile",
                     date: user.updatedAt,
-                    details: "Changed contact information"
+                    details: "Changed contact information",
+                    type: "update"
                   },
                   {
                     action: "Created invoice",
                     date: new Date(Date.now() - 86400000 * 2).toISOString(),
-                    details: "Invoice #INV-2023-001"
+                    details: "Invoice #INV-2023-001",
+                    type: "create"
                   }
                 ].map((activity, index) => (
-                  <div key={index} className="flex gap-4 p-3 rounded-md hover:bg-muted/50">
-                    <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />
+                  <div key={index} className="flex gap-4 p-3 rounded-md hover:bg-muted/50 transition-colors">
+                    <div className="w-2 h-2 rounded-full mt-1.5" 
+                      style={{
+                        backgroundColor: activity.type === "login" ? "#22c55e" : 
+                                        activity.type === "update" ? "#3b82f6" : 
+                                        "#8b5cf6"
+                      }} 
+                    />
                     <div>
                       <p className="font-medium">{activity.action}</p>
                       <p className="text-sm text-muted-foreground">{activity.details}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{formatDate(activity.date)}</p>
+                      <div className="flex items-center mt-1.5">
+                        <Badge variant="outline" className="px-1.5 py-0 text-[0.65rem] font-normal border-muted-foreground/30">
+                          {formatDate(activity.date)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 ))}
                 
                 {/* Empty state if no activity */}
                 {user.lastLoginAt === undefined && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No recent activity found for this user.</p>
+                  <div className="text-center py-8 border border-dashed rounded-md border-muted-foreground/30">
+                    <p className="text-muted-foreground">No recent activity found for this user.</p>
+                    <Button variant="outline" size="sm" className="mt-4">
+                      Refresh Activity
+                    </Button>
                   </div>
                 )}
               </div>

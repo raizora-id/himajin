@@ -1,8 +1,65 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { Form, Link, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react";
 import { ArrowLeft, Plus } from "lucide-react";
 import { UserRole, getRoleLabel, getWarehousesFromUsers, mockUsers } from "~/features/dashboard/models/user.model";
+import { useForm, FieldErrors } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useEffect, useRef } from "react";
+
+// Shadcn UI Components
+import { Input } from "~/ui/input/input";
+import { Textarea } from "~/ui/textarea/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
+import { Button } from "~/ui/button/button";
+import { Label } from "~/ui/label/label";
+
+// Define user schema using Zod for validation
+const userSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Valid email address is required" }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+  passwordConfirm: z.string(),
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  role: z.string().min(1, { message: "Role is required" }),
+  warehouseId: z.string().optional(),
+  isActive: z.boolean(),
+}).refine(data => data.password === data.passwordConfirm, {
+  message: "Passwords do not match",
+  path: ["passwordConfirm"], // Path of the error
+});
+
+type UserFormValues = z.infer<typeof userSchema>;
+
+// FormField component for consistent form field styling and error display
+function FormField({ 
+  id, 
+  label, 
+  error, 
+  children,
+  required = false
+}: { 
+  id: string; 
+  label: string; 
+  error?: string; 
+  children: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <label htmlFor={id} className="text-sm font-medium flex items-center gap-1">
+        {label}
+        {required && <span className="text-destructive">*</span>}
+      </label>
+      {children}
+      {error && (
+        <p className="text-destructive text-xs mt-1">{error}</p>
+      )}
+    </div>
+  );
+}
 
 export const meta: MetaFunction = () => {
   return [
@@ -81,38 +138,94 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return redirect("/dashboard/users");
 };
 
-function FormField({ 
-  id, 
-  label, 
-  error, 
-  children,
-  required = false
-}: { 
-  id: string; 
-  label: string; 
-  error?: string; 
-  children: React.ReactNode;
-  required?: boolean;
-}) {
-  return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="text-sm font-medium flex items-center gap-1">
-        {label}
-        {required && <span className="text-destructive">*</span>}
-      </label>
-      {children}
-      {error && (
-        <p className="text-destructive text-xs mt-1">{error}</p>
-      )}
-    </div>
-  );
-}
-
 export default function AddUser() {
   const { options } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const submit = useSubmit();
+  
+  // Form refs for scroll-to-error functionality
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  // Set up form with react-hook-form and zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    getValues,
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      passwordConfirm: "",
+      phoneNumber: "",
+      address: "",
+      role: "",
+      warehouseId: "",
+      isActive: true
+    }
+  });
+
+  // Handle form submission
+  const onSubmit = (data: UserFormValues) => {
+    // Create FormData object for Remix action
+    const formData = new FormData();
+    
+    // Add all fields to FormData
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+    
+    // Submit the form
+    submit(formData, { method: "post" });
+  };
+
+  // Handle validation errors and scroll to the first error field
+  const onError = (errors: FieldErrors<UserFormValues>) => {
+    console.error("Form validation errors:", errors);
+    
+    // Get first error field
+    const errorKeys = Object.keys(errors) as Array<keyof UserFormValues>;
+    if (errorKeys.length > 0) {
+      const firstErrorKey = errorKeys[0];
+      const errorElement = document.getElementById(firstErrorKey.toString());
+      
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  };
+  
+  // Check for server-side errors from action
+  useEffect(() => {
+    if (actionData?.errors) {
+      // Loop through server-side errors and set them in react-hook-form
+      Object.entries(actionData.errors).forEach(([key, value]) => {
+        // This will show server-side errors in the UI
+        setValue(key as any, getValues(key as any), { 
+          shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true
+        });
+      });
+      
+      // Scroll to first error
+      const firstErrorKey = Object.keys(actionData.errors)[0];
+      const errorElement = document.getElementById(firstErrorKey);
+      
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  }, [actionData, setValue, getValues]);
   
   // Generate a random password suggestion
   const generatePassword = () => {
@@ -121,313 +234,269 @@ export default function AddUser() {
     for (let i = 0; i < 12; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    
+    // Set both password fields
+    setValue("password", password, { shouldValidate: true });
+    setValue("passwordConfirm", password, { shouldValidate: true });
+    
     return password;
   };
   
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <Link
-          to="/dashboard/users"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-2"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to Users
-        </Link>
-        <h2 className="text-2xl font-bold">Add New User</h2>
+    <div className="container py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            asChild
+          >
+            <Link to="/dashboard/users">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Add New User</h1>
+        </div>
       </div>
-      
-      <Form method="post" className="space-y-8">
-        <div className="grid grid-cols-1 gap-8">
-          {/* User Information */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h3 className="text-lg font-semibold mb-6">User Information</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField 
-                id="name" 
-                label="Full Name" 
-                error={actionData?.errors?.name}
-                required
-              >
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
-                  placeholder="Enter full name"
-                />
-              </FormField>
-              
-              <FormField 
-                id="email" 
-                label="Email Address" 
-                error={actionData?.errors?.email}
-                required
-              >
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
-                  placeholder="email@example.com"
-                />
-              </FormField>
-              
-              <FormField 
-                id="phoneNumber" 
-                label="Phone Number" 
-                error={actionData?.errors?.phoneNumber}
-              >
-                <input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  type="tel"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  placeholder="+62-812-3456-7890"
-                />
-              </FormField>
-              
-              <FormField 
-                id="isActive" 
-                label="Status" 
-                error={actionData?.errors?.isActive}
-              >
-                <select
-                  id="isActive"
-                  name="isActive"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue="true"
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
-              </FormField>
-              
-              <div className="col-span-1 md:col-span-2">
-                <FormField 
-                  id="address" 
-                  label="Address" 
-                  error={actionData?.errors?.address}
-                >
-                  <textarea
-                    id="address"
-                    name="address"
-                    rows={3}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    placeholder="Enter address (optional)"
-                  />
-                </FormField>
-              </div>
-            </div>
-          </div>
+
+      <Form ref={formRef} method="post" className="space-y-8" onSubmit={handleSubmit(onSubmit, onError)}>
+        {/* User Information */}
+        <div className="bg-card rounded-lg border border-border p-6">
+          <h2 className="text-xl font-semibold mb-6">User Information</h2>
           
-          {/* Account & Authentication */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h3 className="text-lg font-semibold mb-6">Account & Authentication</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField 
-                id="password" 
-                label="Password" 
-                error={actionData?.errors?.password}
-                required
-              >
-                <div className="flex gap-2">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    required
-                    placeholder="Enter password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const password = generatePassword();
-                      const passwordInput = document.getElementById("password") as HTMLInputElement;
-                      const confirmInput = document.getElementById("passwordConfirm") as HTMLInputElement;
-                      if (passwordInput) passwordInput.value = password;
-                      if (confirmInput) confirmInput.value = password;
-                      
-                      // Create a temporary textarea element to copy to clipboard
-                      const textArea = document.createElement('textarea');
-                      textArea.value = password;
-                      document.body.appendChild(textArea);
-                      textArea.select();
-                      document.execCommand('copy');
-                      document.body.removeChild(textArea);
-                      
-                      // Show copied notification (in a real app)
-                      alert("Generated password copied to clipboard: " + password);
-                    }}
-                    className="bg-muted text-foreground hover:bg-muted/80 px-3 py-2 rounded-md text-sm whitespace-nowrap"
-                  >
-                    Generate
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Password must be at least 8 characters
-                </p>
-              </FormField>
-              
-              <FormField 
-                id="passwordConfirm" 
-                label="Confirm Password" 
-                error={actionData?.errors?.passwordConfirm}
-                required
-              >
-                <input
-                  id="passwordConfirm"
-                  name="passwordConfirm"
-                  type="password"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
-                  placeholder="Confirm password"
-                />
-              </FormField>
-              
-              <div className="flex items-center col-span-2 mt-2">
-                <input
-                  id="sendEmail"
-                  name="sendEmail"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input"
-                  defaultChecked
-                />
-                <label htmlFor="sendEmail" className="ml-2 text-sm">
-                  Send welcome email with login instructions
-                </label>
-              </div>
-            </div>
-          </div>
-          
-          {/* Role & Permissions */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h3 className="text-lg font-semibold mb-6">Role & Permissions</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField 
-                id="role" 
-                label="User Role" 
-                error={actionData?.errors?.role}
-                required
-              >
-                <select
-                  id="role"
-                  name="role"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
-                  defaultValue=""
-                >
-                  <option value="">Select Role</option>
-                  {options.roles.map(role => (
-                    <option key={role} value={role}>
-                      {getRoleLabel(role)}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  The role defines what permissions the user will have in the system
-                </p>
-              </FormField>
-              
-              <FormField 
-                id="warehouseId" 
-                label="Warehouse Assignment" 
-                error={actionData?.errors?.warehouseId}
-              >
-                <select
-                  id="warehouseId"
-                  name="warehouseId"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue=""
-                >
-                  <option value="">Global Access (All Warehouses)</option>
-                  {options.warehouses.map(warehouse => (
-                    <option key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Restrict user access to a specific warehouse location
-                </p>
-              </FormField>
-            </div>
-            
-            <div className="mt-6 p-4 bg-muted/50 border border-border rounded-md">
-              <h4 className="text-sm font-medium mb-2">Permission Summary</h4>
-              <p className="text-sm text-muted-foreground">
-                Permissions will be automatically assigned based on the selected role.
-                You can customize individual permissions after creating the user.
-              </p>
-            </div>
-          </div>
-          
-          {/* Profile Image */}
-          <div className="bg-card rounded-lg border border-border p-6">
-            <h3 className="text-lg font-semibold mb-6">Profile Image</h3>
-            
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg p-12">
-              <div className="text-center">
-                <p className="text-muted-foreground mb-2">
-                  Drag and drop your image here, or click to select a file
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  PNG, JPG or WEBP up to 1MB
-                </p>
-              </div>
-              <button
-                type="button"
-                className="mt-4 bg-muted text-foreground hover:bg-muted/80 h-9 px-4 py-2 rounded-md text-sm"
-              >
-                Select Image
-              </button>
-              <input
-                type="file"
-                id="avatar"
-                name="avatar"
-                accept="image/*"
-                className="hidden"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Name */}
+            <FormField
+              id="name"
+              label="Name"
+              error={errors.name?.message || actionData?.errors?.name}
+              required
+            >
+              <Input
+                id="name"
+                {...register("name")}
+                aria-invalid={errors.name ? "true" : "false"}
               />
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Note: Image upload is not functional in this demo
-            </p>
+              <input type="hidden" name="name" value={getValues("name")} />
+            </FormField>
+            
+            {/* Email */}
+            <FormField
+              id="email"
+              label="Email"
+              error={errors.email?.message || actionData?.errors?.email}
+              required
+            >
+              <Input
+                id="email"
+                type="email"
+                {...register("email")}
+                aria-invalid={errors.email ? "true" : "false"}
+              />
+              <input type="hidden" name="email" value={getValues("email")} />
+            </FormField>
+            
+            {/* Phone Number */}
+            <FormField
+              id="phoneNumber"
+              label="Phone Number"
+              error={errors.phoneNumber?.message || actionData?.errors?.phoneNumber}
+            >
+              <Input
+                id="phoneNumber"
+                type="tel"
+                {...register("phoneNumber")}
+                aria-invalid={errors.phoneNumber ? "true" : "false"}
+              />
+              <input type="hidden" name="phoneNumber" value={getValues("phoneNumber") || ""} />
+            </FormField>
+            
+            {/* Address */}
+            <FormField
+              id="address"
+              label="Address"
+              error={errors.address?.message || actionData?.errors?.address}
+            >
+              <Textarea
+                id="address"
+                rows={2}
+                {...register("address")}
+                aria-invalid={errors.address ? "true" : "false"}
+              />
+              <input type="hidden" name="address" value={getValues("address") || ""} />
+            </FormField>
+          </div>
+        </div>
+        
+        {/* Access Control */}
+        <div className="bg-card rounded-lg border border-border p-6">
+          <h2 className="text-xl font-semibold mb-6">Access Control</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Role */}
+            <FormField
+              id="role"
+              label="Role"
+              error={errors.role?.message || actionData?.errors?.role}
+              required
+            >
+              <Select 
+                onValueChange={(value) => setValue("role", value, { shouldValidate: true })}
+              >
+                <SelectTrigger id="role" className="w-full">
+                  <SelectValue placeholder="Select a role..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.roles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {getRoleLabel(role)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="role" value={getValues("role")} />
+            </FormField>
+            
+            {/* Warehouse */}
+            <FormField
+              id="warehouseId"
+              label="Assigned Warehouse"
+              error={errors.warehouseId?.message || actionData?.errors?.warehouseId}
+            >
+              <Select 
+                onValueChange={(value) => setValue("warehouseId", value, { shouldValidate: true })}
+              >
+                <SelectTrigger id="warehouseId" className="w-full">
+                  <SelectValue placeholder="No warehouse restriction" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No warehouse restriction</SelectItem>
+                  {options.warehouses.map((warehouse) => (
+                    <SelectItem key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="warehouseId" value={getValues("warehouseId") || ""} />
+              <p className="text-xs text-muted-foreground mt-1">
+                Restrict user access to a specific warehouse location
+              </p>
+            </FormField>
+            
+            {/* Status */}
+            <FormField
+              id="isActive"
+              label="Status"
+              error={errors.isActive?.message || actionData?.errors?.isActive}
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="active" 
+                    className="h-4 w-4"
+                    {...register("isActive")}
+                    value="true"
+                    defaultChecked
+                  />
+                  <Label htmlFor="active" className="cursor-pointer">Active</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="inactive" 
+                    className="h-4 w-4"
+                    {...register("isActive")}
+                    value="false"
+                  />
+                  <Label htmlFor="inactive" className="cursor-pointer">Inactive</Label>
+                </div>
+                <input type="hidden" name="isActive" value={getValues("isActive").toString()} />
+              </div>
+            </FormField>
+          </div>
+        </div>
+        
+        {/* Password */}
+        <div className="bg-card rounded-lg border border-border p-6">
+          <h2 className="text-xl font-semibold mb-6">Set Password</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Password */}
+            <FormField
+              id="password"
+              label="Password"
+              error={errors.password?.message || actionData?.errors?.password}
+              required
+            >
+              <Input
+                type="password"
+                id="password"
+                {...register("password")}
+                aria-invalid={errors.password ? "true" : "false"}
+              />
+              <input type="hidden" name="password" value={getValues("password")} />
+            </FormField>
+            
+            {/* Password Confirmation */}
+            <FormField
+              id="passwordConfirm"
+              label="Confirm Password"
+              error={errors.passwordConfirm?.message || actionData?.errors?.passwordConfirm}
+              required
+            >
+              <Input
+                type="password"
+                id="passwordConfirm"
+                {...register("passwordConfirm")}
+                aria-invalid={errors.passwordConfirm ? "true" : "false"}
+              />
+              <input type="hidden" name="passwordConfirm" value={getValues("passwordConfirm")} />
+            </FormField>
+          </div>
+          
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => generatePassword()}
+            >
+              Generate Secure Password
+            </Button>
           </div>
         </div>
         
         {/* Form Actions */}
         <div className="flex justify-end gap-4">
-          <Link
-            to="/dashboard/users"
-            className="bg-muted text-foreground hover:bg-muted/80 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors"
+          <Button
+            variant="outline"
+            type="button"
+            asChild
           >
-            Cancel
-          </Link>
+            <Link to="/dashboard/users">
+              Cancel
+            </Link>
+          </Button>
           
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors disabled:opacity-70"
+            className="inline-flex items-center gap-2"
           >
             {isSubmitting ? (
               <>
                 <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                Creating...
+                Creating User...
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4" />
+                <Plus className="h-4 w-4" />
                 Create User
               </>
             )}
-          </button>
+          </Button>
         </div>
       </Form>
     </div>

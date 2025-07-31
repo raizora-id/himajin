@@ -1,10 +1,39 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { Form, Link, useActionData, useLoaderData, useNavigation, useSubmit } from "@remix-run/react";
 import { ArrowLeft, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { FieldErrors } from "react-hook-form";
+import { Button } from "~/ui/button/button";
+import { Input } from "~/ui/input/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
+import { Textarea } from "~/ui/textarea/textarea";
 import { mockUsers } from "~/features/dashboard/models/user.model";
 import { mockWarehouses } from "~/features/dashboard/models/warehouse.model";
+
+// Define Zod schema for form validation
+const warehouseSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  code: z.string().min(1, "Code is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  province: z.string().min(1, "Province is required"),
+  postalCode: z.string().min(1, "Postal code is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  capacity: z.number().positive("Capacity must be a positive number"),
+  isActive: z.boolean(),
+  managerId: z.string().optional().or(z.literal("")),
+  latitude: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90")
+    .optional().nullable(),
+  longitude: z.number().min(-180, "Longitude must be between -180 and 180").max(180, "Longitude must be between -180 and 180")
+    .optional().nullable()
+});
+
+type WarehouseFormValues = z.infer<typeof warehouseSchema>;
 
 export const meta: MetaFunction = () => {
   return [
@@ -160,11 +189,110 @@ export default function AddWarehouse() {
   const { potentialManagers } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+  const isNavigationSubmitting = navigation.state === "submitting";
+  const formRef = useRef<HTMLFormElement>(null);
+  const submit = useSubmit();
   
   const [hasLocationData, setHasLocationData] = useState<boolean>(false);
   const [city, setCity] = useState<string>("");
   const [code, setCode] = useState<string>("");
+  
+  // Set up form with react-hook-form and zod resolver
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<WarehouseFormValues>({
+    resolver: zodResolver(warehouseSchema),
+    defaultValues: {
+      name: "",
+      code: "",
+      address: "",
+      city: "",
+      province: "",
+      postalCode: "",
+      phone: "",
+      email: "",
+      capacity: 1000,
+      isActive: true,
+      managerId: "",
+      latitude: undefined,
+      longitude: undefined
+    }
+  });
+  
+  // Handle form submission
+  const onSubmit = (data: WarehouseFormValues) => {
+    console.log("Form submitted with data:", data);
+    
+    // Create FormData to submit through Remix
+    const formData = new FormData();
+    
+    // Add all form fields to FormData
+    formData.append("name", data.name);
+    formData.append("code", data.code);
+    formData.append("address", data.address);
+    formData.append("city", data.city);
+    formData.append("province", data.province);
+    formData.append("postalCode", data.postalCode);
+    formData.append("phone", data.phone);
+    
+    // Optional fields
+    if (data.email) formData.append("email", data.email);
+    
+    formData.append("capacity", String(data.capacity));
+    formData.append("isActive", String(data.isActive));
+    
+    if (data.managerId) formData.append("managerId", data.managerId);
+    
+    if (hasLocationData && data.latitude !== undefined && data.latitude !== null) {
+      formData.append('latitude', data.latitude.toString());
+    }
+    
+    if (hasLocationData && data.longitude !== undefined && data.longitude !== null) {
+      formData.append('longitude', data.longitude.toString());
+    }
+    
+    submit(formData, { method: 'post' });
+  };
+  
+  // Handle validation errors and scroll to the first error field
+  const onError = (errors: FieldErrors<WarehouseFormValues>) => {
+    console.log("Form validation errors:", errors);
+    
+    // Get the first field with an error
+    const firstError = Object.keys(errors)[0] as keyof WarehouseFormValues;
+    
+    // Find the element by ID and scroll to it
+    if (firstError) {
+      const errorElement = document.getElementById(firstError);
+      if (errorElement) {
+        // Scroll the element into view with smooth behavior
+        setTimeout(() => {
+          errorElement.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'center'
+          });
+          // Add focus for accessibility
+          errorElement.focus({ preventScroll: true });
+        }, 100);
+      }
+    }
+  };
+  
+  // Scroll to first error when form is submitted with errors
+  useEffect(() => {
+    const firstError = Object.keys(errors)[0];
+    if (firstError) {
+      const errorElement = document.getElementById(firstError);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus({ preventScroll: true });
+      }
+    }
+  }, [errors]);
   
   // Generate warehouse code based on city
   const handleCityChange = (newCity: string) => {
@@ -191,7 +319,7 @@ export default function AddWarehouse() {
         <p className="text-muted-foreground">Create a new warehouse or branch location</p>
       </div>
       
-      <Form method="post" className="space-y-8">
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit, onError)} method="post" className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Basic Information */}
           <div className="bg-card rounded-lg border border-border p-6">
@@ -200,53 +328,62 @@ export default function AddWarehouse() {
               <FormField 
                 id="name" 
                 label="Warehouse Name" 
-                error={actionData?.errors?.name}
+                error={errors?.name?.message}
                 required
               >
-                <input
+                <Input
                   id="name"
-                  name="name"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
                   placeholder="Main Warehouse"
+                  {...register("name")}
+                  aria-invalid={!!errors.name}
                 />
+                <input type="hidden" name="name" />
               </FormField>
               
               <FormField 
                 id="city" 
                 label="City" 
-                error={actionData?.errors?.city}
+                error={errors?.city?.message}
                 required
               >
-                <input
+                <Input
                   id="city"
-                  name="city"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
                   placeholder="Jakarta"
                   value={city}
-                  onChange={(e) => handleCityChange(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    handleCityChange(e.target.value);
+                    setValue('city', e.target.value);
+                    if (e.target.value.trim() !== "") {
+                      const generatedCode = generateWarehouseCode(e.target.value);
+                      setCode(generatedCode);
+                      setValue('code', generatedCode);
+                    } else {
+                      setCode("");
+                      setValue('code', "");
+                    }
+                  }}
+                  aria-invalid={!!errors.city}
                 />
+                <input type="hidden" name="city" value={city} />
               </FormField>
               
               <FormField 
                 id="code" 
                 label="Warehouse Code" 
-                error={actionData?.errors?.code}
+                error={errors?.code?.message}
                 required
               >
-                <input
+                <Input
                   id="code"
-                  name="code"
-                  type="text"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  required
                   placeholder="JAK-01"
+                  value={code}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setCode(e.target.value);
+                    setValue('code', e.target.value);
+                  }}
+                  aria-invalid={!!errors.code}
                 />
+                <input type="hidden" name="code" value={code} />
                 {city && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Code is auto-generated based on the city name. You can modify it if needed.
@@ -257,54 +394,61 @@ export default function AddWarehouse() {
               <FormField 
                 id="capacity" 
                 label="Capacity (units)" 
-                error={actionData?.errors?.capacity}
+                error={errors?.capacity?.message}
                 required
               >
-                <input
+                <Input
                   id="capacity"
-                  name="capacity"
                   type="number"
                   min="1"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  defaultValue="1000"
-                  required
+                  {...register("capacity", { valueAsNumber: true })}
+                  aria-invalid={!!errors.capacity}
                 />
+                <input type="hidden" name="capacity" value="1000" />
               </FormField>
               
               <FormField 
                 id="isActive" 
                 label="Status" 
-                error={actionData?.errors?.isActive}
+                error={errors?.isActive?.message}
               >
-                <select
-                  id="isActive"
-                  name="isActive"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select 
+                  onValueChange={(value: string) => setValue('isActive', value === 'true')}
                   defaultValue="true"
                 >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
+                  <SelectTrigger id="isActive" aria-invalid={!!errors.isActive}>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="isActive" value="true" />
               </FormField>
               
               <FormField 
                 id="managerId" 
                 label="Warehouse Manager" 
-                error={actionData?.errors?.managerId}
+                error={errors?.managerId?.message}
               >
-                <select
-                  id="managerId"
-                  name="managerId"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                <Select 
+                  onValueChange={(value: string) => setValue('managerId', value)}
                   defaultValue=""
                 >
-                  <option value="">None (Unassigned)</option>
-                  {potentialManagers.map(manager => (
-                    <option key={manager.id} value={manager.id}>
-                      {manager.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="managerId" aria-invalid={!!errors.managerId}>
+                    <SelectValue placeholder="Select manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None (Unassigned)</SelectItem>
+                    {potentialManagers.map(manager => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="managerId" value="" />
               </FormField>
             </div>
           </div>
@@ -316,81 +460,80 @@ export default function AddWarehouse() {
               <FormField 
                 id="address" 
                 label="Address" 
-                error={actionData?.errors?.address}
+                error={errors?.address?.message}
                 required
               >
-                <textarea
+                <Textarea
                   id="address"
-                  name="address"
                   rows={3}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
                   placeholder="Jl. Sudirman No. 123"
+                  {...register("address")}
+                  aria-invalid={!!errors.address}
                 />
+                <input type="hidden" name="address" />
               </FormField>
               
               <div className="grid grid-cols-2 gap-4">
                 <FormField 
                   id="province" 
                   label="Province" 
-                  error={actionData?.errors?.province}
+                  error={errors?.province?.message}
                   required
                 >
-                  <input
+                  <Input
                     id="province"
-                    name="province"
-                    type="text"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    required
                     placeholder="DKI Jakarta"
+                    {...register("province")}
+                    aria-invalid={!!errors.province}
                   />
+                  <input type="hidden" name="province" />
                 </FormField>
                 
                 <FormField 
                   id="postalCode" 
                   label="Postal Code" 
-                  error={actionData?.errors?.postalCode}
+                  error={errors?.postalCode?.message}
                   required
                 >
-                  <input
+                  <Input
                     id="postalCode"
-                    name="postalCode"
-                    type="text"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                    required
                     placeholder="10220"
+                    {...register("postalCode")}
+                    aria-invalid={!!errors.postalCode}
                   />
+                  <input type="hidden" name="postalCode" />
                 </FormField>
               </div>
               
               <FormField 
                 id="phone" 
                 label="Phone Number" 
-                error={actionData?.errors?.phone}
+                error={errors?.phone?.message}
                 required
               >
-                <input
+                <Input
                   id="phone"
-                  name="phone"
                   type="tel"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  required
                   placeholder="+62-21-5551234"
+                  {...register("phone")}
+                  aria-invalid={!!errors.phone}
                 />
+                <input type="hidden" name="phone" />
               </FormField>
               
               <FormField 
                 id="email" 
                 label="Email" 
-                error={actionData?.errors?.email}
+                error={errors?.email?.message}
               >
-                <input
+                <Input
                   id="email"
-                  name="email"
                   type="email"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
                   placeholder="warehouse@example.com"
+                  {...register("email")}
+                  aria-invalid={!!errors.email}
                 />
+                <input type="hidden" name="email" />
               </FormField>
             </div>
           </div>
@@ -406,7 +549,16 @@ export default function AddWarehouse() {
                   type="checkbox"
                   className="mr-2"
                   checked={hasLocationData}
-                  onChange={(e) => setHasLocationData(e.target.checked)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setHasLocationData(e.target.checked);
+                    if (!e.target.checked) {
+                      setValue('latitude', undefined);
+                      setValue('longitude', undefined);
+                    } else {
+                      setValue('latitude', null);
+                      setValue('longitude', null);
+                    }
+                  }}
                 />
                 Enable location data
               </label>
@@ -418,35 +570,37 @@ export default function AddWarehouse() {
               <FormField 
                 id="latitude" 
                 label="Latitude" 
-                error={actionData?.errors?.latitude}
+                error={errors?.latitude?.message}
               >
-                <input
+                <Input
                   id="latitude"
-                  name="latitude"
                   type="number"
                   step="any"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
                   placeholder="-6.2088"
                   min="-90"
                   max="90"
+                  {...register("latitude", { valueAsNumber: true })}
+                  aria-invalid={!!errors.latitude}
                 />
+                <input type="hidden" name="latitude" />
               </FormField>
               
               <FormField 
                 id="longitude" 
                 label="Longitude" 
-                error={actionData?.errors?.longitude}
+                error={errors?.longitude?.message}
               >
-                <input
+                <Input
                   id="longitude"
-                  name="longitude"
                   type="number"
                   step="any"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
                   placeholder="106.8456"
                   min="-180"
                   max="180"
+                  {...register("longitude", { valueAsNumber: true })}
+                  aria-invalid={!!errors.longitude}
                 />
+                <input type="hidden" name="longitude" />
               </FormField>
               
               {/* Map selection placeholder */}
@@ -474,19 +628,22 @@ export default function AddWarehouse() {
         
         {/* Form Actions */}
         <div className="flex justify-end gap-4">
-          <Link
-            to="/dashboard/warehouses"
-            className="bg-muted text-foreground hover:bg-muted/80 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors"
+          <Button
+            variant="outline"
+            type="button"
+            asChild
           >
-            Cancel
-          </Link>
+            <Link to="/dashboard/warehouses">
+              Cancel
+            </Link>
+          </Button>
           
-          <button
+          <Button
             type="submit"
-            disabled={isSubmitting}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md inline-flex items-center gap-2 transition-colors disabled:opacity-70"
+            disabled={isNavigationSubmitting}
+            className="inline-flex items-center gap-2"
           >
-            {isSubmitting ? (
+            {isNavigationSubmitting ? (
               <>
                 <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 Creating...
@@ -497,9 +654,9 @@ export default function AddWarehouse() {
                 Create Warehouse
               </>
             )}
-          </button>
+          </Button>
         </div>
-      </Form>
+      </form>
     </div>
   );
 }
