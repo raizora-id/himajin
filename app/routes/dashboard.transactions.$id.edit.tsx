@@ -9,12 +9,12 @@ import { mockProducts } from "~/features/dashboard/models/product.model";
 import { useForm, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Input } from "~/ui/input/input";
-import { Label } from "~/ui/label/label";
-import { Textarea } from "~/ui/textarea/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
-import { Button } from "~/ui/button/button";
-import { cn } from "~/lib/utils";
+import { Input } from "~/shared/ui/input/input";
+import { Label } from "~/shared/ui/label/label";
+import { Textarea } from "~/shared/ui/textarea/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/shared/ui/select/select";
+import { Button } from "~/shared/ui/button/button";
+import { cn } from "~/shared/lib/utils";
 
 // Helper functions
 const formatDateForInput = (dateString: string) => {

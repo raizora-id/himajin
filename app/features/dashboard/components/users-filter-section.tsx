@@ -1,6 +1,6 @@
 import React from "react";
 import { Filter, Search, X } from "lucide-react";
-import { Button } from "~/ui/button/button";
+import { Button } from "~/shared/ui/button/button";
 import { UserRole } from "../models/user.model";
 
 export interface FilterOption {

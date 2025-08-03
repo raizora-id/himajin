@@ -1,15 +1,15 @@
 import { Filter, Search, X } from "lucide-react";
 import { ChangeEvent } from "react";
-import { Button } from "~/ui/button/button";
-import { Input } from "~/ui/input/input";
-import { Badge } from "~/ui/badge/badge";
+import { Button } from "~/shared/ui/button/button";
+import { Input } from "~/shared/ui/input/input";
+import { Badge } from "~/shared/ui/badge/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "~/ui/select/select";
+} from "~/shared/ui/select/select";
 import { WarehouseFilterValues, WarehouseTempFilterValues } from "../hooks/use-warehouses-filters";
 
 export interface FilterOption {

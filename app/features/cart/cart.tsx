@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Button } from "../../ui/button/button";
-import { ImageWithFallback } from "../../ui/image-with-fallback/image-with-fallback";
-import { useCart } from "../../stores/cart-store";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../../ui/sheet/sheet";
-import { Badge } from "../../ui/badge/badge";
+import { Button } from "../../shared/ui/button/button";
+import { ImageWithFallback } from "../../shared/ui/image-with-fallback/image-with-fallback";
+import { useCart } from "../../shared/stores/cart-store";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../../shared/ui/sheet/sheet";
+import { Badge } from "../../shared/ui/badge/badge";
 import { Trash2, Plus, Minus, ShoppingCart, X, Check } from "lucide-react";
 
 export function CartButton() {

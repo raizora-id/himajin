@@ -2,13 +2,13 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { ArrowLeft, Calendar, Mail, MapPin, Phone, Pencil } from "lucide-react";
-import { formatDate } from "~/lib/utils";
+import { formatDate } from "~/shared/lib/utils";
 import { UserRole, getRoleLabel, mockUsers } from "~/features/dashboard/models/user.model";
 
 // Shadcn UI Components
-import { Button } from "~/ui/button/button";
-import { Badge } from "~/ui/badge/badge";
-import { Separator } from "~/ui/separator/separator";
+import { Button } from "~/shared/ui/button/button";
+import { Badge } from "~/shared/ui/badge/badge";
+import { Separator } from "~/shared/ui/separator/separator";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [

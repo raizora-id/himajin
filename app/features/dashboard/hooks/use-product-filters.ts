@@ -1,6 +1,6 @@
 import { 
   useQueryState
-} from "~/lib/nuqs-config";
+} from "~/shared/lib/nuqs-config";
 import {
   parseAsString, 
   parseAsInteger,

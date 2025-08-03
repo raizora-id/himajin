@@ -1,6 +1,6 @@
-import svgPaths from "../../../ui/icons/icon-svg";
+import svgPaths from "../../../shared/ui/icons/icon-svg";
 
-import { useDataFetching } from "../../../hooks/use-data-fetching";
+import { useDataFetching } from "../../../shared/hooks/use-data-fetching";
 import { HeroBannersSkeleton } from "./hero-banner-skeleton";
 import {
   Carousel,
@@ -8,7 +8,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "../../../ui/carousel/carousel";
+} from "../../../shared/ui/carousel/carousel";
 
 interface Banner {
   image: string;

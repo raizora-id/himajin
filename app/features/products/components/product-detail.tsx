@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, ShoppingCart, Minus, Plus, Star } from "lucide-react";
-import { Button } from "../../../ui/button/button";
-import { Badge } from "../../../ui/badge/badge";
-import { Separator } from "../../../ui/separator/separator";
+import { Button } from "../../../shared/ui/button/button";
+import { Badge } from "../../../shared/ui/badge/badge";
+import { Separator } from "../../../shared/ui/separator/separator";
 import { useDataFetching } from "../hooks/use-data-fetching";
 import { ProductDetailSkeleton } from "./product-detail-skeleton";
-import { useCart } from "../../../stores/cart-store";
+import { useCart } from "../../../shared/stores/cart-store";
 import { toast } from "sonner";
 
 const images = {

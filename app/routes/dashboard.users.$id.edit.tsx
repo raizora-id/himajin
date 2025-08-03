@@ -7,11 +7,11 @@ import { useForm, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useRef } from "react";
-import { Input } from "~/ui/input/input";
-import { Textarea } from "~/ui/textarea/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
-import { Button } from "~/ui/button/button";
-import { Label } from "~/ui/label/label";
+import { Input } from "~/shared/ui/input/input";
+import { Textarea } from "~/shared/ui/textarea/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/shared/ui/select/select";
+import { Button } from "~/shared/ui/button/button";
+import { Label } from "~/shared/ui/label/label";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [

@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { DataTable } from "./data-table";
 import { StatusBadge } from "./status-badge";
-import { formatCurrency, formatDate } from "~/utils/format";
+import { formatCurrency, formatDate } from "~/shared/utils/format";
 import { 
   TransactionStatus, 
   PaymentMethod, 
