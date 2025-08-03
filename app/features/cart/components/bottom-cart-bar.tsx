@@ -1,5 +1,5 @@
 import { ShoppingCart } from "lucide-react";
-import { useCart } from "../../../stores/cart-store";
+import { useCart } from "../../../shared/stores/cart-store";
 
 interface BottomCartBarProps {
   onCartClick?: () => void;

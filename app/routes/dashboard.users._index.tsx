@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { Plus, Users } from "lucide-react";
-import { formatDate } from "~/utils/format";
+import { formatDate } from "~/shared/utils/format";
 import { UserRole, getRoleLabel, getWarehousesFromUsers, mockUsers } from "~/features/dashboard/models/user.model";
 import { UsersTable, UserItem } from "~/features/dashboard/components/users-table";
 import { UsersFilterSection } from "~/features/dashboard/components/users-filter-section";

@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Button } from "../../ui/button/button";
-import { Input } from "../../ui/input/input";
-import { Label } from "../../ui/label/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../ui/accordion/accordion";
-import { ImageWithFallback } from "../../ui/image-with-fallback/image-with-fallback";
-import { useDataFetching } from "../../hooks/use-data-fetching";
+import { Button } from "../../shared/ui/button/button";
+import { Input } from "../../shared/ui/input/input";
+import { Label } from "../../shared/ui/label/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../shared/ui/select/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../shared/ui/accordion/accordion";
+import { ImageWithFallback } from "../../shared/ui/image-with-fallback/image-with-fallback";
+import { useDataFetching } from "../../shared/hooks/use-data-fetching";
 import { CheckoutSkeleton } from "./checkout-skeleton";
 import { Check, Plus, Minus, Trash2, ShoppingCart, ChevronRight, ChevronLeft, Lock } from "lucide-react";
-import { useCart, type CartItem } from "../../stores/cart-store";
+import { useCart, type CartItem } from "../../shared/stores/cart-store";
 import { toast } from "sonner";
 
 interface CheckoutWizardProps {

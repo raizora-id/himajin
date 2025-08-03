@@ -7,10 +7,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { FieldErrors } from "react-hook-form";
-import { Button } from "~/ui/button/button";
-import { Input } from "~/ui/input/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
-import { Textarea } from "~/ui/textarea/textarea";
+import { Button } from "~/shared/ui/button/button";
+import { Input } from "~/shared/ui/input/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/shared/ui/select/select";
+import { Textarea } from "~/shared/ui/textarea/textarea";
 import { mockUsers } from "~/features/dashboard/models/user.model";
 import { mockWarehouses } from "~/features/dashboard/models/warehouse.model";
 

@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { ArrowLeft, Pencil } from "lucide-react";
-import { formatCurrency, formatDate } from "~/lib/utils";
+import { formatCurrency, formatDate } from "~/shared/lib/utils";
 import { mockProducts } from "~/features/dashboard/models/product.model";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {

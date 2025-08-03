@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { DataTable } from "./data-table";
 import { StatusBadge } from "./status-badge";
-import { formatDate } from "~/utils/format";
+import { formatDate } from "~/shared/utils/format";
 import { 
   UserRole, 
   getRoleLabel

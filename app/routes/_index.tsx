@@ -22,14 +22,14 @@ import { ProductGrid } from "../features/products/components/product-grid";
 import { ProductDetail } from "../features/products/components/product-detail";
 import { CheckoutWizard } from "../features/products/components/checkout-wizard";
 import About from "../features/about/about";
-import Footer from "../ui/footer/footer";
+import Footer from "../shared/ui/footer/footer";
 import { CartButton } from "../features/cart/cart";
-import { HeaderBar } from "../ui/header-bar/header-bar";
+import { HeaderBar } from "../shared/ui/header-bar/header-bar";
 import { BottomCartBar } from "../features/cart/components/bottom-cart-bar";
 import { HomeSkeleton } from "../features/home/components/home-skeleton";
-import { Button } from "../ui/button/button";
-import { Toaster } from "../ui/sonner/sonner";
-import { useDataFetching } from "../hooks/use-data-fetching";
+import { Button } from "../shared/ui/button/button";
+import { Toaster } from "../shared/ui/sonner/sonner";
+import { useDataFetching } from "../shared/hooks/use-data-fetching";
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<"home" | "product-detail" | "checkout" | "checkout-success" | "about">("home");

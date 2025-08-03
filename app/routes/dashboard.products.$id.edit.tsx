@@ -7,11 +7,11 @@ import { mockProducts } from "~/features/dashboard/models/product.model";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Input } from "~/ui/input/input";
-import { Label } from "~/ui/label/label";
-import { Checkbox } from "~/ui/checkbox/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/ui/select/select";
-import { Textarea } from "~/ui/textarea/textarea";
+import { Input } from "~/shared/ui/input/input";
+import { Label } from "~/shared/ui/label/label";
+import { Checkbox } from "~/shared/ui/checkbox/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/shared/ui/select/select";
+import { Textarea } from "~/shared/ui/textarea/textarea";
 
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {

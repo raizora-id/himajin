@@ -8,7 +8,7 @@ import {
 import { Building2, MoreHorizontal } from "lucide-react";
 import { Warehouse, calculateCapacityPercentage, getCapacityColorClass, formatFullAddress } from "~/features/dashboard/models/warehouse.model";
 import { DataTable } from "~/features/dashboard/components/data-table";
-import { Badge } from "~/ui/badge/badge";
+import { Badge } from "~/shared/ui/badge/badge";
 import { StatusBadge } from "~/features/dashboard/components/status-badge";
 
 export interface WarehousesTableProps {

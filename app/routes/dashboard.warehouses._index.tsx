@@ -3,7 +3,7 @@ import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { Plus } from "lucide-react";
 import type { SortingState } from "@tanstack/react-table";
-import { Button } from "~/ui/button/button";
+import { Button } from "~/shared/ui/button/button";
 import { Pagination } from "~/features/dashboard/components/pagination";
 import { WarehousesTable } from "~/features/dashboard/components/warehouses-table";
 import { WarehousesFilterSection } from "~/features/dashboard/components/warehouses-filter-section";

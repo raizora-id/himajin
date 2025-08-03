@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-import { useDataFetching } from "../../../hooks/use-data-fetching";
+import { useDataFetching } from "../../../shared/hooks/use-data-fetching";
 import { ProductGridSkeleton } from "./product-skeleton";
-import { useCart } from "../../../stores/cart-store";
-import { Button } from "../../../ui/button/button";
+import { useCart } from "../../../shared/stores/cart-store";
+import { Button } from "../../../shared/ui/button/button";
 import { ShoppingCart, Plus } from "lucide-react";
 import { toast } from "sonner";
 

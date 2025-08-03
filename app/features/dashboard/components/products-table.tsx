@@ -9,7 +9,7 @@ import {
   type ProductListItem,
 } from "~/features/dashboard/models/product.model";
 import { DataTable, StatusBadge, WarehouseLink } from "./";
-import { formatCurrency } from "~/lib/utils";
+import { formatCurrency } from "~/shared/lib/utils";
 
 export interface ProductsTableProps {
   products: ProductListItem[];

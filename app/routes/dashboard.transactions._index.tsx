@@ -3,10 +3,10 @@ import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { TransactionsTable, TransactionsFilterSection, Pagination } from "~/features/dashboard/components";
-import { Button } from "~/ui/button/button";
+import { Button } from "~/shared/ui/button/button";
 import { useTransactionFilters } from "~/features/dashboard/hooks/use-transaction-filters";
 import { PaymentMethod, TransactionStatus, getWarehousesFromTransactions, mockTransactions } from "~/features/dashboard/models/transaction.model";
-import { formatCurrency, formatDate } from "~/utils/format";
+import { formatCurrency, formatDate } from "~/shared/utils/format";
 
 export const meta: MetaFunction = () => {
   return [

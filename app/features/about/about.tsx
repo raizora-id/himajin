@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImageWithFallback } from '../../ui/image-with-fallback/image-with-fallback';
+import { ImageWithFallback } from '../../shared/ui/image-with-fallback/image-with-fallback';
 import profileImage from 'figma:asset/c2511b1f89c6e5b27702700c10a7a665ebaf524e.png';
 
 export default function About() {
